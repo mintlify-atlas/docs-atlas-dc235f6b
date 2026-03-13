@@ -1,0 +1,121 @@
+{
+  "projectType": "frontend",
+  "projectName": "AnimeAho Client",
+  "projectDescription": "A modern anime streaming web client built with vanilla JavaScript featuring anime browsing, episode watching, search, and user management.",
+  "theme": "aspen",
+  "primaryColor": "#1a6bc4",
+  "lightColor": "#3392ff",
+  "darkColor": "#071d42",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "project-structure"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/anime-browsing",
+              "features/video-player",
+              "features/search",
+              "features/authentication",
+              "features/favorites"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/components",
+              "architecture/services",
+              "architecture/pages"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/setup",
+              "development/components",
+              "development/adding-pages",
+              "development/styling"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Services",
+            "pages": [
+              "api/services/anime-service",
+              "api/services/auth-service",
+              "api/services/favorite-service",
+              "api/services/comment-service",
+              "api/services/user-service"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "api/components/anime-card",
+              "api/components/video-player",
+              "api/components/search-dropdown",
+              "api/components/episode-list",
+              "api/components/comment-section"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "api/utils/auth",
+              "api/utils/storage",
+              "api/utils/navigation",
+              "api/utils/error-handler"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "api/models/anime",
+              "api/models/responses"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Anime browsing and discovery",
+    "Multi-server video streaming",
+    "Advanced search with filters",
+    "User authentication and profiles",
+    "Favorites management",
+    "Episode comments",
+    "Responsive design",
+    "Real-time airing schedule"
+  ],
+  "publicApiSurface": [
+    "getAnimeBySlug(animeSlug)",
+    "getEpisodeBySlug(episodeSlug)",
+    "getAiringAnimes()",
+    "getLatestEpisodes()",
+    "searchAnimeWithText(searchQuery, page, signal)",
+    "searchAnimeFilter(options)",
+    "renderAnimeCard(anime, badge, includeRating)",
+    "renderVideoPlayer(episodeData, prevEpisodeSlug, nextEpisodeSlug, animeSlug)",
+    "login(email, password)",
+    "register(userData)",
+    "addFavorite(animeData)",
+    "removeFavorite(favoriteId)",
+    "addComment(animeId, episodeId, comment)",
+    "deleteComment(commentId)"
+  ]
+}

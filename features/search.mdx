@@ -1,0 +1,420 @@
+---
+title: Search
+description: Real-time anime search with instant results, dropdown suggestions, and advanced filtering capabilities
+---
+
+## Overview
+
+The Search feature provides users with instant anime discovery through real-time text search with autocomplete suggestions and advanced filtering options. The system includes debounced search, request cancellation, and responsive dropdown results.
+
+## Search Implementation
+
+The main search functionality is located in `~/workspace/source/js/utils/search.js`.
+
+### Initialization
+
+Search listeners are initialized using the `addListenerInput()` function:
+
+```javascript
+export function addListenerInput() {
+    const input = document.querySelector('.header__search-input');
+    const button = document.querySelector('.header__search-link');
+    
+    input.addEventListener('input', () => searchAnime(input.value, input));
+    input.addEventListener('blur', () => {
+        setTimeout(() => hideDropdown(), 150);
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            navigateToAnimeSearchList(1);
+        }
+    });
+
+    button.addEventListener('click', () => {
+        if (!input.value.length == 0) navigateToAnimeSearchList(1);
+    });
+}
+```
+
+**Event Listeners:**
+- **input** - Triggers search as user types
+- **blur** - Hides dropdown when focus is lost (with 150ms delay)
+- **keydown** - Navigates to full search page on Enter key
+- **click** - Search button triggers full results page
+
+<Note>
+The 150ms delay on blur allows users to click dropdown items before the dropdown disappears.
+</Note>
+
+## Real-Time Search
+
+The core search function with request cancellation:
+
+```javascript
+const dropdown = document.querySelector('.header__search-dropdown');
+let currentController = null;
+
+async function searchAnime(value, input) {
+    if (value.trim().length === 0) {
+        hideDropdown();
+        return;
+    }
+
+    if (currentController) currentController.abort();
+    currentController = new AbortController();
+
+    const animesResponse = await searchAnimeWithText(value, currentController.signal);
+
+    if (input.value.trim().length === 0) {
+        hideDropdown();
+        return;
+    }
+
+    if (!animesResponse.success) {
+        dropdown.innerHTML = '<p>No se encontraron coincidencias</p>';
+        return;
+    }
+
+    renderDropdown(animesResponse.data.media);
+}
+```
+
+### Request Cancellation
+
+The search uses `AbortController` to cancel outdated requests:
+
+<CodeGroup>
+```javascript Previous Request
+// User types "naru"
+const controller1 = new AbortController();
+await searchAnimeWithText('naru', controller1.signal);
+```
+
+```javascript New Request (Cancels Previous)
+// User types "naruto" quickly
+controller1.abort();  // Cancels "naru" request
+const controller2 = new AbortController();
+await searchAnimeWithText('naruto', controller2.signal);
+```
+</CodeGroup>
+
+<Accordion title="Why Cancel Previous Requests?">
+Cancelling previous requests prevents race conditions where an older, slower request might return after a newer request, displaying incorrect results. This ensures users always see results matching their current input.
+</Accordion>
+
+## Search Dropdown
+
+The dropdown component displays instant search results from `~/workspace/source/js/components/SearchDropdown.js:12`:
+
+```javascript
+export function renderDropdown(media) {
+    dropdown.innerHTML = '';
+    const total = Math.min(5, media.length);
+    
+    for (let i = 0; i < total; i++) {
+        dropdown.appendChild(renderDropdownItem(media[i]));
+    }
+
+    if (media.length > 5) {
+        const button = document.createElement('button');
+        button.className = 'header__search-more';
+        button.textContent = 'Ver más';
+        
+        button.addEventListener('click', () => navigateToAnimeSearchList(1));
+        dropdown.appendChild(button);
+    }
+
+    dropdown.style.display = 'block';
+}
+```
+
+**Dropdown Features:**
+- Displays maximum 5 results
+- Shows "Ver más" button if more than 5 results exist
+- Clicking "Ver más" navigates to full search results page
+- Dynamically populated from search API
+
+### Hiding the Dropdown
+
+```javascript
+export function hideDropdown() {
+    dropdown.style.display = 'none';
+}
+```
+
+## API Integration
+
+The search integrates with the anime service API from `~/workspace/source/js/services/animeService.js:140`:
+
+### Text Search
+
+```javascript
+export async function searchAnimeWithText(searchQuery, page, signal = null) {
+    const params = new URLSearchParams({ query: searchQuery, page });
+    const endpoint = `${ANIME_API_BASE_URL}${ANIME_ENDPOINTS.SEARCH_ANIME}?${params}`;
+    
+    try {
+        const response = await fetch(endpoint, { signal });
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new SearchAnimeResponse(data);
+    } catch (error) {
+        if (error.name === 'AbortError') return; // ← ignora cancelaciones
+        console.error("Error al buscar anime:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+<Note>
+Aborted requests return undefined instead of throwing errors, allowing the search flow to continue smoothly.
+</Note>
+
+### Advanced Filter Search
+
+For more complex searches with filters:
+
+```javascript
+export async function searchAnimeFilter({
+    order = 'default',
+    types = [],
+    genres = [],
+    statuses = [],
+    page = 1
+} = {}) {
+    const params = new URLSearchParams({ order, page });
+    const endpoint = `${BACKEND_API_BASE_URL}${BACKEND_ENDPOINTS.PROXY_SEARCH_BY_FILTER}?${params}`;
+    
+    try {
+        const requestBody = { order, types, genres, statuses, page };
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+        
+        const data = await response.json();
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new SearchAnimeResponse(data);
+    } catch (error) {
+        console.error("Error al buscar con filtros:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+## Filter Options
+
+<CodeGroup>
+```javascript By Type
+const filters = {
+    types: ['tv', 'movie'],  // TV series and movies only
+    order: 'popularity',
+    page: 1
+};
+
+const results = await searchAnimeFilter(filters);
+```
+
+```javascript By Genre
+const filters = {
+    genres: ['action', 'adventure'],
+    order: 'rating',
+    page: 1
+};
+
+const results = await searchAnimeFilter(filters);
+```
+
+```javascript By Status
+const filters = {
+    statuses: [1],  // 1 = airing only
+    order: 'added',
+    page: 1
+};
+
+const results = await searchAnimeFilter(filters);
+```
+
+```javascript Combined Filters
+const filters = {
+    types: ['tv', 'ova'],
+    genres: ['fantasy', 'magic'],
+    statuses: [1, 2],  // airing and completed
+    order: 'rating',
+    page: 1
+};
+
+const results = await searchAnimeFilter(filters);
+```
+</CodeGroup>
+
+## Filter Parameters
+
+| Parameter | Type | Options | Description |
+|-----------|------|---------|-------------|
+| `order` | string | `'default'`, `'popularity'`, `'rating'`, `'added'` | Sort order for results |
+| `types` | array | `'tv'`, `'movie'`, `'ova'`, `'special'` | Anime format types |
+| `genres` | array | Genre strings | Filter by genres |
+| `statuses` | array | `1` (airing), `2` (completed), `3` (upcoming) | Filter by broadcast status |
+| `page` | number | Positive integer | Pagination page number |
+
+## Search URL Integration
+
+Search can also be performed using direct URLs:
+
+```javascript
+export async function searchAnimeWithUrl(searchUrl) {
+    const params = new URLSearchParams({ url: searchUrl });
+    const endpoint = `${ANIME_API_BASE_URL}${ANIME_ENDPOINTS.SEARCH_BY_URL}?${params}`;
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new SearchAnimeResponse(data);
+    } catch (error) {
+        console.error("Error al buscar por URL:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+## Usage Examples
+
+### Basic Text Search
+
+```javascript
+import { addListenerInput } from '../utils/search.js';
+
+// Initialize search on page load
+document.addEventListener('DOMContentLoaded', () => {
+    addListenerInput();
+});
+```
+
+### Programmatic Search
+
+```javascript
+import { searchAnimeWithText } from '../services/animeService.js';
+
+// Search for anime
+const results = await searchAnimeWithText('naruto', 1);
+
+if (results.success) {
+    console.log(results.data.media); // Array of anime results
+}
+```
+
+### Advanced Filtering
+
+```javascript
+import { searchAnimeFilter } from '../services/animeService.js';
+
+// Find popular airing TV anime
+const filters = {
+    types: ['tv'],
+    statuses: [1],
+    order: 'popularity',
+    page: 1
+};
+
+const results = await searchAnimeFilter(filters);
+```
+
+## Response Structure
+
+Both search methods return a `SearchAnimeResponse` object:
+
+```javascript
+{
+    success: true,
+    data: {
+        media: [
+            {
+                title: 'Anime Title',
+                slug: 'anime-title',
+                cover: 'https://example.com/cover.jpg',
+                type: 'TV',
+                status: 'Airing',
+                rating: '4.5',
+                synopsis: 'Description...',
+                // ... more fields
+            }
+        ],
+        pagination: {
+            currentPage: 1,
+            totalPages: 10,
+            hasNext: true
+        }
+    }
+}
+```
+
+## Error Handling
+
+<Accordion title="Empty Search Query">
+```javascript
+if (value.trim().length === 0) {
+    hideDropdown();
+    return;
+}
+```
+Prevents API calls when search input is empty.
+</Accordion>
+
+<Accordion title="No Results Found">
+```javascript
+if (!animesResponse.success) {
+    dropdown.innerHTML = '<p>No se encontraron coincidencias</p>';
+    return;
+}
+```
+Displays user-friendly message when no results match the query.
+</Accordion>
+
+<Accordion title="Request Cancellation">
+```javascript
+if (error.name === 'AbortError') return;
+```
+Gracefully handles cancelled requests without logging errors.
+</Accordion>
+
+## Performance Optimizations
+
+1. **Request Cancellation** - Aborts outdated requests
+2. **Result Limiting** - Shows only 5 results in dropdown
+3. **Trim Validation** - Prevents empty/whitespace-only searches
+4. **Delayed Blur** - 150ms delay allows dropdown interaction
+
+## Related Features
+
+- [Anime Browsing](/features/anime-browsing) - Browse anime catalog
+- [Video Player](/features/video-player) - Watch search results
+- [Favorites](/features/favorites) - Save search results

@@ -1,0 +1,291 @@
+---
+title: 'Favorite Service'
+description: 'Service for managing user favorite anime collections'
+---
+
+The Favorite Service allows users to manage their favorite anime list, including adding, removing, and checking favorite status.
+
+## Import
+
+```javascript
+import {
+  getFavorites,
+  addFavorite,
+  removeFavorite,
+  checkFavorite
+} from './services/favoriteService.js';
+```
+
+## API Endpoints
+
+The Favorite Service interacts with the following backend endpoints:
+
+- `GET /api/favorites` - Retrieve user's favorites
+- `POST /api/favorites` - Add anime to favorites
+- `DELETE /api/favorites/:id` - Remove anime from favorites
+- `GET /api/favorites/check/:animeId` - Check if anime is favorited
+
+## Functions
+
+### getFavorites
+
+Retrieves the authenticated user's complete list of favorite anime.
+
+```javascript
+const result = await getFavorites();
+
+if (!result.error) {
+  console.log(`You have ${result.data.length} favorites`);
+  result.data.forEach(anime => {
+    console.log(`${anime.title} - ${anime.slug}`);
+  });
+}
+```
+
+**Returns:** `Promise<FavoritesResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="FavoriteAnime[]">
+  Array of favorite anime
+  <Expandable title="FavoriteAnime properties">
+    <ResponseField name="id" type="string">
+      Favorite record ID
+    </ResponseField>
+    <ResponseField name="animeId" type="string">
+      External anime ID
+    </ResponseField>
+    <ResponseField name="slug" type="string">
+      Anime slug identifier
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      Anime title
+    </ResponseField>
+    <ResponseField name="cover" type="string">
+      Cover image URL
+    </ResponseField>
+    <ResponseField name="type" type="string">
+      Anime type (TV, Movie, etc.)
+    </ResponseField>
+    <ResponseField name="addedAt" type="string">
+      Timestamp when added to favorites
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### addFavorite
+
+Adds an anime to the user's favorites list.
+
+```javascript
+const result = await addFavorite({
+  animeId: '12345',
+  slug: 'one-piece',
+  title: 'One Piece',
+  cover: 'https://example.com/cover.jpg',
+  type: 'TV'
+});
+
+if (!result.error) {
+  console.log('Anime added to favorites!');
+  console.log('Favorite ID:', result.data.id);
+}
+```
+
+<ParamField path="animeData" type="object" required>
+  Anime information to add
+  <Expandable title="Anime data object">
+    <ParamField path="animeId" type="string" required>
+      External anime ID from the anime API
+    </ParamField>
+    <ParamField path="slug" type="string" required>
+      Anime slug identifier
+    </ParamField>
+    <ParamField path="title" type="string" required>
+      Anime title
+    </ParamField>
+    <ParamField path="cover" type="string">
+      Cover image URL
+    </ParamField>
+    <ParamField path="type" type="string">
+      Anime type (TV, Movie, OVA, etc.)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<AddFavoriteResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the anime was added successfully
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Response data">
+    <ResponseField name="id" type="string">
+      ID of the newly created favorite record
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Confirmation message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### removeFavorite
+
+Removes an anime from the user's favorites list.
+
+```javascript
+const favoriteId = 'fav_12345';
+const result = await removeFavorite(favoriteId);
+
+if (!result.error) {
+  console.log('Anime removed from favorites');
+}
+```
+
+<ParamField path="favoriteId" type="string" required>
+  The ID of the favorite record to remove
+</ParamField>
+
+**Returns:** `Promise<RemoveFavoriteResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the anime was removed successfully
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message
+</ResponseField>
+
+---
+
+### checkFavorite
+
+Checks if a specific anime is in the user's favorites.
+
+```javascript
+const animeId = '12345';
+const result = await checkFavorite(animeId);
+
+if (!result.error) {
+  if (result.data.isFavorite) {
+    console.log('This anime is in your favorites!');
+    console.log('Favorite ID:', result.data.favoriteId);
+  } else {
+    console.log('This anime is not favorited');
+  }
+}
+```
+
+<ParamField path="animeId" type="string" required>
+  The external anime ID to check
+</ParamField>
+
+**Returns:** `Promise<CheckFavoriteResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Check result">
+    <ResponseField name="isFavorite" type="boolean">
+      Whether the anime is in favorites
+    </ResponseField>
+    <ResponseField name="favoriteId" type="string | null">
+      ID of the favorite record if it exists
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## Usage Example
+
+Here's a complete example of implementing a favorite button:
+
+```javascript
+import { checkFavorite, addFavorite, removeFavorite } from './services/favoriteService.js';
+
+class FavoriteButton {
+  constructor(animeId, animeData) {
+    this.animeId = animeId;
+    this.animeData = animeData;
+    this.favoriteId = null;
+    this.isFavorite = false;
+  }
+
+  async init() {
+    const result = await checkFavorite(this.animeId);
+    if (!result.error) {
+      this.isFavorite = result.data.isFavorite;
+      this.favoriteId = result.data.favoriteId;
+      this.updateUI();
+    }
+  }
+
+  async toggle() {
+    if (this.isFavorite) {
+      const result = await removeFavorite(this.favoriteId);
+      if (!result.error) {
+        this.isFavorite = false;
+        this.favoriteId = null;
+        this.updateUI();
+      }
+    } else {
+      const result = await addFavorite(this.animeData);
+      if (!result.error) {
+        this.isFavorite = true;
+        this.favoriteId = result.data.id;
+        this.updateUI();
+      }
+    }
+  }
+
+  updateUI() {
+    const button = document.getElementById('favorite-btn');
+    button.textContent = this.isFavorite ? '♥ Favorited' : '♡ Add to Favorites';
+  }
+}
+```
+
+## Error Handling
+
+```javascript
+const result = await addFavorite(animeData);
+
+if (result.error) {
+  switch (result.statusCode) {
+    case 401:
+      console.error('Please log in to add favorites');
+      break;
+    case 409:
+      console.error('This anime is already in your favorites');
+      break;
+    default:
+      console.error('Error:', result.message);
+  }
+}
+```
+
+<ResponseField name="error" type="boolean">
+  True if an error occurred
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error message description
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code
+</ResponseField>
+
+<Note>
+  All favorite operations require the user to be authenticated. Include the authentication token in request headers.
+</Note>

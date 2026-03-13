@@ -1,0 +1,344 @@
+---
+title: "VideoPlayer"
+description: "Video player component with server selection, episode navigation, and iframe-based playback"
+---
+
+## Overview
+
+The VideoPlayer component provides a complete video playback experience with server selection, episode navigation controls, and dynamic iframe-based video rendering. It manages server switching, displays episode information, and handles navigation between episodes.
+
+**File Location:** `source/js/components/VideoPlayer.js`
+
+## Main Export
+
+### renderVideoPlayer()
+
+Renders the complete video player interface including title, video iframe, server selection buttons, and navigation controls.
+
+```javascript
+renderVideoPlayer(episodeData, prevEpisodeSlug, nextEpisodeSlug, animeSlug)
+```
+
+<ParamField path="episodeData" type="Object" required>
+  Episode information and available servers
+  
+  **Properties:**
+  - `title` (string): Anime title
+  - `number` (number): Episode number
+  - `servers` (Array\<Object\>): List of available video servers
+    - `name` (string): Server name (e.g., "Okru", "YouTube")
+    - `embed` (string): Embed URL for the video
+</ParamField>
+
+<ParamField path="prevEpisodeSlug" type="string | null" required>
+  Slug of the previous episode. Set to `null` if this is the first episode.
+</ParamField>
+
+<ParamField path="nextEpisodeSlug" type="string | null" required>
+  Slug of the next episode. Set to `null` if this is the last episode.
+</ParamField>
+
+<ParamField path="animeSlug" type="string" required>
+  Slug of the anime for the return button navigation
+</ParamField>
+
+**Returns:** `void`
+
+#### Example
+
+```javascript
+import { renderVideoPlayer } from './components/VideoPlayer.js';
+
+const episodeData = {
+  title: 'One Piece',
+  number: 1090,
+  servers: [
+    { name: 'Okru', embed: 'https://ok.ru/videoembed/12345' },
+    { name: 'YouTube', embed: 'https://youtube.com/embed/abcde' },
+    { name: 'Streamtape', embed: 'https://streamtape.com/e/12345' }
+  ]
+};
+
+renderVideoPlayer(
+  episodeData,
+  'one-piece-1089',  // Previous episode
+  'one-piece-1091',  // Next episode
+  'one-piece'        // Anime slug
+);
+```
+
+<Note>
+  The function automatically caches DOM references and renders the first available server by default.
+</Note>
+
+## Internal Functions
+
+### cacheDOM()
+
+Caches references to DOM elements for better performance.
+
+```javascript
+cacheDOM()
+```
+
+Caches the following elements:
+- `#video-title` - Episode title container
+- `#video-wrapper` - Video iframe container
+- `#video-servers` - Server buttons container
+- `#video-downloads` - Download links container
+- `#video-controls` - Video controls container
+- `#video-nav` - Navigation buttons container
+- `#video-back` - Back button container
+
+**Returns:** `void`
+
+---
+
+### renderEpisodeTitle()
+
+Renders the episode title in the format "Anime Title - Episodio N".
+
+```javascript
+renderEpisodeTitle(title, episodeNumber)
+```
+
+<ParamField path="title" type="string" required>
+  Anime title
+</ParamField>
+
+<ParamField path="episodeNumber" type="number" required>
+  Episode number
+</ParamField>
+
+**Returns:** `void`
+
+---
+
+### renderInitialVideo()
+
+Renders the video iframe for the first available server. Shows an error message if no servers are available.
+
+```javascript
+renderInitialVideo(servers)
+```
+
+<ParamField path="servers" type="Array<Object>" required>
+  List of server objects with `embed` URLs
+</ParamField>
+
+**Returns:** `void`
+
+---
+
+### createVideoIframe()
+
+Creates an iframe element configured for video playback.
+
+```javascript
+createVideoIframe(embedUrl)
+```
+
+<ParamField path="embedUrl" type="string" required>
+  URL of the video embed
+</ParamField>
+
+**Returns:** `HTMLIFrameElement` - Configured iframe element
+
+#### Iframe Configuration
+
+The created iframe has the following attributes:
+
+```html
+<iframe 
+  src="{embedUrl}"
+  class="main__player-iframe"
+  allowfullscreen="true"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+></iframe>
+```
+
+---
+
+### renderServerButtons()
+
+Renders clickable buttons for each available server. Skips servers without embed URLs.
+
+```javascript
+renderServerButtons(servers)
+```
+
+<ParamField path="servers" type="Array<Object>" required>
+  Array of server objects. Servers without an `embed` property are skipped.
+</ParamField>
+
+**Returns:** `void`
+
+---
+
+### createServerButton()
+
+Creates a server selection button with proper ARIA attributes.
+
+```javascript
+createServerButton(server, isActive)
+```
+
+<ParamField path="server" type="Object" required>
+  Server data
+  
+  **Properties:**
+  - `name` (string): Display name of the server
+  - `embed` (string): Embed URL
+</ParamField>
+
+<ParamField path="isActive" type="boolean" required>
+  Whether this server should be marked as active initially
+</ParamField>
+
+**Returns:** `HTMLButtonElement` - Configured button element
+
+#### Button Structure
+
+```html
+<button 
+  class="main__servers-btn main__servers-btn--active"
+  data-embed-url="{embedUrl}"
+  aria-label="Seleccionar servidor {name}"
+  aria-pressed="true"
+  title="Ver en {name}"
+>
+  {name}
+</button>
+```
+
+---
+
+### handleServerChange()
+
+Handles server switching by updating button states and changing the video source.
+
+```javascript
+handleServerChange(serverButton, embedUrl)
+```
+
+<ParamField path="serverButton" type="HTMLButtonElement" required>
+  The button that was clicked
+</ParamField>
+
+<ParamField path="embedUrl" type="string" required>
+  Embed URL of the new server
+</ParamField>
+
+**Returns:** `void`
+
+**Behavior:**
+1. Removes active state from all server buttons
+2. Sets `aria-pressed="false"` on all buttons
+3. Adds active state to the clicked button
+4. Sets `aria-pressed="true"` on the clicked button
+5. Updates the video source
+
+---
+
+### updateVideoSource()
+
+Updates the iframe source URL. Briefly resets the source to force video reload.
+
+```javascript
+updateVideoSource(embedUrl)
+```
+
+<ParamField path="embedUrl" type="string" required>
+  New embed URL to load
+</ParamField>
+
+**Returns:** `void`
+
+**Implementation:**
+```javascript
+iframe.src = '';  // Clear source
+setTimeout(() => {
+  iframe.src = embedUrl;  // Set new source after 100ms
+}, 100);
+```
+
+<Note>
+  The 100ms delay ensures the iframe fully resets before loading the new video source.
+</Note>
+
+## Complete Usage Example
+
+<CodeGroup>
+```javascript Basic Usage
+import { renderVideoPlayer } from './components/VideoPlayer.js';
+
+// Fetch episode data from API
+const episodeData = await getEpisodeBySlug('one-piece-1090');
+
+// Render the player
+renderVideoPlayer(
+  episodeData,
+  episodeData.prevEpisodeSlug,
+  episodeData.nextEpisodeSlug,
+  'one-piece'
+);
+```
+
+```javascript First Episode
+// First episode (no previous)
+renderVideoPlayer(
+  episodeData,
+  null,              // No previous episode
+  'anime-slug-2',    // Next episode
+  'anime-slug'
+);
+```
+
+```javascript Last Episode
+// Last episode (no next)
+renderVideoPlayer(
+  episodeData,
+  'anime-slug-99',   // Previous episode
+  null,              // No next episode
+  'anime-slug'
+);
+```
+
+```javascript No Servers
+// Handle episode with no servers
+const episodeData = {
+  title: 'Anime Title',
+  number: 1,
+  servers: []  // Empty servers array
+};
+
+// Will display: "No hay servidores disponibles para este episodio."
+renderVideoPlayer(episodeData, null, null, 'anime-slug');
+```
+</CodeGroup>
+
+## CSS Classes
+
+- `.video-title` - Episode title text
+- `.main__player-iframe` - Video iframe
+- `.main__servers-btn` - Server button
+- `.main__servers-btn--active` - Active server button state
+
+## Dependencies
+
+```javascript
+import { renderEpisodeNavigation, renderReturnButton } from "./Navbar.js";
+```
+
+## State Management
+
+The module maintains internal state:
+
+```javascript
+let domElementCache = {};  // Cached DOM references
+let animeTitle = '';       // Current anime title
+```
+
+<Note>
+  The DOM cache is populated on each call to `renderVideoPlayer()` via `cacheDOM()`.
+</Note>

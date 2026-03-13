@@ -1,0 +1,288 @@
+---
+title: Architecture Overview
+description: Understanding the overall architecture and design patterns of the AnimeAho Client
+---
+
+The AnimeAho Client is a vanilla JavaScript single-page application (SPA) that follows a modular architecture with clear separation of concerns. The application is built using ES6 modules and follows modern web development practices.
+
+## High-Level Architecture
+
+The application is structured around a layered architecture pattern:
+
+```
+┌─────────────────────────────────────┐
+│         HTML Pages                  │
+│    (index, anime, watch, etc.)      │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│         Page Controllers            │
+│   (Initialize and orchestrate)      │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│         Components Layer            │
+│   (Reusable UI components)          │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│         Services Layer              │
+│   (API communication & logic)       │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│         Models Layer                │
+│   (Data transformation & typing)    │
+└─────────────────────────────────────┘
+```
+
+## Module System
+
+The application uses **ES6 modules** with explicit imports and exports:
+
+```javascript
+// Importing services
+import { getAnimeBySlug } from '../services/animeService.js';
+
+// Importing components
+import { renderAnimeDetail } from '../components/AnimeDetail.js';
+
+// Importing utilities
+import { extractSlugFromURL } from '../utils/urlParams.js';
+```
+
+<Note>
+All module paths include the `.js` extension for compatibility with native ES modules in browsers.
+</Note>
+
+## Directory Structure
+
+```
+js/
+├── components/      # Reusable UI components
+├── config/         # Configuration files (API endpoints)
+├── models/         # Data models and response wrappers
+├── pages/          # Page controllers (entry points)
+├── services/       # API services and business logic
+└── utils/          # Utility functions and helpers
+```
+
+## Data Flow Pattern
+
+The application follows a unidirectional data flow:
+
+1. **User Interaction** → Page controller receives event
+2. **Page Controller** → Calls service layer
+3. **Service Layer** → Fetches data from API
+4. **Model Layer** → Transforms raw API response
+5. **Component Layer** → Renders data to DOM
+
+### Example Flow
+
+Here's how data flows when viewing an anime detail page:
+
+```javascript
+// pages/anime.js
+async function initializeAnimeDetailPage() {
+    const animeSlug = extractSlugFromURL();
+    
+    // 1. Request data from service
+    const animeData = await getAnimeBySlug(animeSlug);
+    
+    // 2. Service returns typed model
+    if (!animeData || !animeData.data) {
+        handleAnimeNotFound();
+        return;
+    }
+    
+    // 3. Component renders data
+    renderAnimeDetail(animeData.data);
+}
+```
+
+## Configuration Management
+
+API endpoints and constants are centralized in the `config/` directory:
+
+```javascript
+// config/api.config.js
+export const ANIME_API_BASE_URL = 'https://animeflv.ahmedrangel.com';
+
+export const ANIME_ENDPOINTS = {
+    ANIME_SLUG: (slug) => `/api/anime/${slug}`,
+    EPISODE_SLUG: (slug) => `/api/anime/episode/${slug}`,
+    LATEST_EPISODES: '/api/list/latest-episodes',
+    SEARCH_ANIME: '/api/search'
+};
+```
+
+This centralization makes it easy to:
+- Update API URLs across the entire application
+- Switch between development and production environments
+- Maintain consistency in endpoint usage
+
+## Error Handling Strategy
+
+The application implements a comprehensive error handling strategy:
+
+### Service Layer Errors
+
+All service functions return either a success response or a `ResponseError` model:
+
+```javascript
+export async function getAnimeBySlug(animeSlug) {
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new AnimeBySlugResponse(data);
+    } catch (error) {
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0
+        });
+    }
+}
+```
+
+### UI Error Handling
+
+The `errorHandler` utility provides user-friendly error messages:
+
+```javascript
+import { handleAnimeNotFound, handleLoadError } from '../utils/errorHandler.js';
+
+if (!animeData || !animeData.data) {
+    handleAnimeNotFound();
+    return;
+}
+```
+
+## Performance Optimizations
+
+### DOM Caching
+
+Components cache DOM references to avoid repeated queries:
+
+```javascript
+let domElementCache = {};
+
+function cacheDOM() {
+    domElementCache = {
+        cover: document.getElementById('anime-cover'),
+        title: document.getElementById('anime-title'),
+        description: document.getElementById('anime-description')
+    };
+}
+```
+
+### Lazy Loading
+
+Images are loaded lazily using the native `loading` attribute:
+
+```javascript
+image.loading = 'lazy';
+```
+
+### Request Cancellation
+
+Search requests are cancellable using `AbortController`:
+
+```javascript
+if (currentController) currentController.abort();
+currentController = new AbortController();
+
+const response = await searchAnimeWithText(value, currentController.signal);
+```
+
+## Design Patterns
+
+### Module Pattern
+
+Each module exposes only necessary functions:
+
+```javascript
+// Private function
+function handleCardNavigation(slug, isDetailView) {
+    if (isDetailView) {
+        navigateToAnimeDetail(slug);
+    }
+}
+
+// Public export
+export function renderAnimeCard(anime, badgeText, isDetailView) {
+    // Implementation
+}
+```
+
+### Factory Pattern
+
+Models use constructor functions to transform API responses:
+
+```javascript
+export class AnimeBySlugResponse {
+    constructor(data) {
+        this.success = data.success;
+        this.data = data.data ? new AnimeDetail(data.data) : null;
+    }
+}
+```
+
+### Observer Pattern
+
+Event listeners manage user interactions:
+
+```javascript
+document.addEventListener('DOMContentLoaded', initializeHomePage);
+
+input.addEventListener('input', () => searchAnime(input.value));
+```
+
+## Navigation System
+
+Navigation is handled through utility functions that manage URL changes:
+
+```javascript
+export function navigateToAnimeDetail(slug) {
+    window.location.href = `./anime.html?slug=${slug}`;
+}
+
+export function navigateToEpisode(episodeSlug) {
+    window.location.href = `./watch.html?slug=${episodeSlug}`;
+}
+```
+
+<Note>
+The application uses traditional page navigation rather than client-side routing, ensuring better browser compatibility and SEO.
+</Note>
+
+## State Management
+
+State is managed locally within modules using module-level variables:
+
+```javascript
+let listEpisodes = [];
+let animeCover = '';
+let currentEpisodeSortOrder = 'desc';
+```
+
+This approach is suitable for the application's scope and avoids unnecessary complexity from external state management libraries.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Components" icon="puzzle-piece" href="/architecture/components">
+    Learn about the component architecture and reusable UI patterns
+  </Card>
+  <Card title="Services" icon="server" href="/architecture/services">
+    Explore the service layer and API integration
+  </Card>
+  <Card title="Pages" icon="file" href="/architecture/pages">
+    Understand page controllers and initialization
+  </Card>
+</CardGroup>

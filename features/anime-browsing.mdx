@@ -1,0 +1,302 @@
+---
+title: Anime Browsing
+description: Browse and discover anime content across different sections including airing animes, latest episodes, and newest additions to the catalog
+---
+
+## Overview
+
+The Anime Browsing feature provides users with multiple ways to discover and explore anime content. The home page dynamically loads content in three main sections: currently airing anime, latest episodes, and newly added anime to the catalog.
+
+## Key Components
+
+### Home Page Initialization
+
+The main entry point for browsing anime content is the `initializeHomePage()` function, which orchestrates loading all browsing sections:
+
+```javascript
+async function initializeHomePage() {
+    try {
+        await loadAiringAnimes();
+        await loadLatestEpisodes();
+        await loadLatestAnimes();
+        addListenerInput();
+    } catch (error) {
+        console.error('Error al inicializar la página principal:', error);
+        displayErrorMessage('Error al cargar el contenido. Intenta recargar la página.');
+    }
+}
+```
+
+<Note>
+The initialization function loads all sections asynchronously and includes comprehensive error handling to ensure a smooth user experience.
+</Note>
+
+## Browsing Sections
+
+### Airing Animes
+
+Displays anime that are currently being broadcast. This section is loaded using the `loadAiringAnimes()` function:
+
+```javascript
+async function loadAiringAnimes() {
+    try {
+        const response = await getAiringAnimes();
+        const section = document.getElementById('airing-animes');
+
+        if (!section) {
+            console.warn('Sección "airing-animes" no encontrada en el DOM');
+            return;
+        }
+
+        if (!response.data || response.data.length === 0) {
+            section.innerHTML = '<p>No hay animes en emisión en este momento.</p>';
+            return;
+        }
+
+        response.data.forEach(anime => {
+            const animeLink = createAnimeLinks(anime);
+            section.appendChild(animeLink);
+        });
+    } catch (error) {
+        console.error('Error al cargar animes en emisión:', error);
+    }
+}
+```
+
+**Key Features:**
+- Fetches currently airing anime from the API
+- Renders anime as clickable links
+- Handles empty states gracefully
+- DOM validation before rendering
+
+### Latest Episodes
+
+Shows the most recently released episodes across all anime. Episodes are rendered as cards with episode numbers:
+
+```javascript
+async function loadLatestEpisodes() {
+    try {
+        const response = await getLatestEpisodes();
+        const section = document.getElementById('latest-episodes');
+
+        if (!section) {
+            console.warn('Sección "latest-episodes" no encontrada en el DOM');
+            return;
+        }
+
+        if (!response.data || response.data.length === 0) {
+            section.innerHTML = '<p>No hay episodios recientes disponibles.</p>';
+            return;
+        }
+
+        response.data.forEach(episode => {
+            const episodeCard = renderAnimeCard(
+                episode,
+                `Episodio: ${episode.number}`,
+                false
+            );
+            episodeCard.classList.add('anime-card--episode');
+            section.appendChild(episodeCard);
+        });
+    } catch (error) {
+        console.error('Error al cargar últimos episodios:', error);
+    }
+}
+```
+
+<Note>
+Episode cards include a badge showing the episode number and are marked with the `anime-card--episode` class for styling differentiation.
+</Note>
+
+### Latest Animes
+
+Displays recently added anime to the catalog using advanced filtering:
+
+```javascript
+async function loadLatestAnimes() {
+    try {
+        const filterOptions = {
+            types: ['tv', 'movie', 'special', 'ova'],
+            order: 'added',
+            genres: [],
+            statuses: [1, 2, 3]
+        };
+
+        const response = await searchAnimeFilter(filterOptions);
+        const section = document.getElementById('latest-animes');
+
+        if (!section) {
+            console.warn('Sección "latest-animes" no encontrada en el DOM');
+            return;
+        }
+
+        if (!response.data || !response.data.media || response.data.media.length === 0) {
+            section.innerHTML = '<p>No hay animes disponibles en este momento.</p>';
+            return;
+        }
+
+        response.data.media.forEach(anime => {
+            const animeCard = renderAnimeCard(
+                anime,
+                anime.type,
+                true
+            );
+            section.appendChild(animeCard);
+        });
+    } catch (error) {
+        displayErrorMessage(`Error al cargar últimos animes: ${error}`);
+    }
+}
+```
+
+**Filter Options:**
+- **types**: Includes TV shows, movies, specials, and OVAs
+- **order**: Sorted by date added (`'added'`)
+- **statuses**: All statuses (1=airing, 2=completed, 3=upcoming)
+
+## Anime Card Component
+
+Anime content is displayed using the `renderAnimeCard()` component from `~/workspace/source/js/components/AnimeCard.js:24`:
+
+```javascript
+export function renderAnimeCard(anime, badgeText = null, isDetailView = true) {
+    const article = document.createElement('article');
+    article.className = 'anime-card';
+    article.setAttribute('data-anime-slug', anime.slug);
+
+    const imageLink = document.createElement('a');
+    imageLink.className = 'anime-card__a';
+    imageLink.href = '#';
+    imageLink.setAttribute('title', `Ver ${isDetailView ? 'detalles de' : 'episodios de'} ${anime.title}`);
+
+    const image = document.createElement('img');
+    image.className = 'anime-card__image';
+    image.src = anime.cover;
+    image.alt = `Portada de ${anime.title}`;
+    image.loading = 'lazy';
+
+    imageLink.appendChild(image);
+
+    if (badgeText) {
+        const badge = document.createElement('div');
+        badge.className = 'anime-card__badge';
+        badge.textContent = badgeText;
+        imageLink.appendChild(badge);
+    }
+
+    const titleElement = document.createElement('p');
+    titleElement.className = 'anime-card__name';
+    titleElement.textContent = anime.title;
+    titleElement.setAttribute('title', anime.title);
+
+    article.appendChild(imageLink);
+    article.appendChild(titleElement);
+
+    imageLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleCardNavigation(anime.slug, isDetailView);
+    });
+
+    return article;
+}
+```
+
+<Accordion title="Card Navigation Logic">
+The card navigation is handled by the `handleCardNavigation()` function:
+
+```javascript
+function handleCardNavigation(slug, isDetailView) {
+    if (isDetailView) {
+        navigateToAnimeDetail(slug);
+    } else {
+        navigateToEpisode(slug);
+    }
+}
+```
+
+When `isDetailView` is `true`, clicking navigates to the anime detail page. When `false`, it navigates directly to the episode player.
+</Accordion>
+
+## API Integration
+
+The browsing feature integrates with multiple anime service endpoints:
+
+<CodeGroup>
+```javascript Airing Animes
+import { getAiringAnimes } from '../services/animeService.js';
+
+const response = await getAiringAnimes();
+// Returns: AiringAnimesResponse with data array
+```
+
+```javascript Latest Episodes
+import { getLatestEpisodes } from '../services/animeService.js';
+
+const response = await getLatestEpisodes();
+// Returns: LatestEpisodesResponse with episode data
+```
+
+```javascript Filter Search
+import { searchAnimeFilter } from '../services/animeService.js';
+
+const filterOptions = {
+    types: ['tv', 'movie', 'special', 'ova'],
+    order: 'added',
+    genres: [],
+    statuses: [1, 2, 3]
+};
+
+const response = await searchAnimeFilter(filterOptions);
+// Returns: SearchAnimeResponse with media array
+```
+</CodeGroup>
+
+## Error Handling
+
+The browsing system implements multiple layers of error handling:
+
+1. **Try-Catch Blocks**: All async operations are wrapped in try-catch blocks
+2. **DOM Validation**: Checks for DOM elements before rendering
+3. **Empty State Handling**: Displays user-friendly messages when no content is available
+4. **Error Messages**: Uses the `displayErrorMessage()` utility for user feedback
+
+```javascript
+try {
+    await loadAiringAnimes();
+    await loadLatestEpisodes();
+    await loadLatestAnimes();
+    addListenerInput();
+} catch (error) {
+    console.error('Error al inicializar la página principal:', error);
+    displayErrorMessage('Error al cargar el contenido. Intenta recargar la página.');
+}
+```
+
+## Usage Example
+
+To initialize anime browsing on a page:
+
+```javascript
+import {
+    getAiringAnimes,
+    getLatestEpisodes,
+    searchAnimeFilter,
+} from '../services/animeService.js';
+import { renderAnimeCard } from '../components/AnimeCard.js';
+import { createAnimeLinks } from '../components/AnimeLink.js';
+import { addListenerInput } from '../utils/search.js';
+import { displayErrorMessage } from '../utils/errorHandler.js';
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeHomePage);
+```
+
+<Note>
+The browsing system automatically initializes when the DOM is fully loaded, ensuring all required elements are available before rendering.
+</Note>
+
+## Related Features
+
+- [Search](/features/search) - Search for specific anime titles
+- [Video Player](/features/video-player) - Watch anime episodes
+- [Favorites](/features/favorites) - Save favorite anime

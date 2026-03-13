@@ -1,0 +1,93 @@
+---
+title: "CommentSection"
+description: "Comment section component for displaying and managing user comments (not yet implemented)"
+---
+
+## Overview
+
+The CommentSection component is planned to handle displaying and managing user comments on anime episodes and pages.
+
+**File Location:** `source/js/components/CommentSection.js`
+
+<Note>
+  **Status:** This component is not yet implemented. The source file currently exists but contains no code.
+</Note>
+
+## Planned Features
+
+Based on the project structure, the CommentSection component is expected to:
+
+- Display a list of user comments
+- Provide a form for submitting new comments
+- Handle comment interactions (like, reply, etc.)
+- Integrate with the comment service and models
+
+## Related Components
+
+The following related comment components also exist in the codebase:
+
+- `CommentForm.js` - Form for submitting comments (not yet implemented)
+- `CommentItem.js` - Individual comment display (not yet implemented)
+
+## Related Files
+
+- `source/js/models/Comment.js` - Comment data model
+- `source/js/services/commentService.js` - Comment API service
+
+## Implementation Status
+
+<Warning>
+  This component has not been implemented yet. The source file is empty and contains no exported functions or classes.
+</Warning>
+
+## Expected API (Tentative)
+
+When implemented, the component may export functions similar to:
+
+```javascript
+// Tentative API - not yet implemented
+
+// Render the complete comment section
+export function renderCommentSection(episodeSlug, container) {
+  // Implementation pending
+}
+
+// Load and display comments
+export function loadComments(episodeSlug) {
+  // Implementation pending
+}
+
+// Handle new comment submission
+export function submitComment(commentData) {
+  // Implementation pending
+}
+```
+
+<Note>
+  The actual API may differ when the component is implemented.
+</Note>
+
+## Contributing
+
+If you're looking to implement this component, consider:
+
+1. Reviewing the `commentService.js` to understand available API endpoints
+2. Examining the `Comment.js` model for data structure
+3. Creating reusable sub-components (`CommentForm`, `CommentItem`)
+4. Adding proper error handling and loading states
+5. Implementing comment sorting and filtering
+6. Adding accessibility features (ARIA labels, keyboard navigation)
+
+## Check Implementation Status
+
+To check if this component has been implemented, view the source file:
+
+```bash
+cat source/js/components/CommentSection.js
+```
+
+Or check the related component files:
+
+```bash
+ls -la source/js/components/Comment*.js
+```

@@ -1,0 +1,250 @@
+---
+title: 'Error Handler'
+description: 'Error handling utilities for displaying user-friendly error messages'
+---
+
+## Overview
+
+The error handler utilities provide standardized functions for handling and displaying errors throughout the AnimeAho client application. These functions ensure consistent error messaging and user experience.
+
+## Functions
+
+### handleMissingSlug
+
+Handles errors when a required slug parameter is missing or invalid in the URL.
+
+```javascript errorHandler.js:7-13
+export function handleMissingSlug() {
+    console.error('No se proporcionó un slug válido en la URL');
+    const mainContent = document.querySelector('.main__inner');
+    if (mainContent) {
+        mainContent.innerHTML = '<p class="error-message">Error: Episodio no especificado. Por favor, regresa a la página anterior.</p>';
+    }
+}
+```
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { extractSlugFromURL } from './utils/urlParams.js';
+import { handleMissingSlug } from './utils/errorHandler.js';
+
+const slug = extractSlugFromURL();
+if (!slug) {
+    handleMissingSlug();
+    // Displays: "Error: Episodio no especificado. Por favor, regresa a la página anterior."
+}
+```
+
+---
+
+### handleEpisodeNotFound
+
+Handles errors when the requested episode cannot be found in the database.
+
+```javascript errorHandler.js:21-27
+export function handleEpisodeNotFound() {
+    console.error('El episodio solicitado no fue encontrado');
+    const mainContent = document.querySelector('.main__inner');
+    if (mainContent) {
+        mainContent.innerHTML = '<p class="error-message">Error: No se encontró el episodio solicitado.</p>';
+    }
+}
+```
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { getEpisodeBySlug } from './services/animeService.js';
+import { handleEpisodeNotFound } from './utils/errorHandler.js';
+
+try {
+    const response = await getEpisodeBySlug(slug);
+    if (!response.success || !response.data) {
+        handleEpisodeNotFound();
+    }
+} catch (error) {
+    handleEpisodeNotFound();
+}
+```
+
+---
+
+### handleLoadError
+
+Handles general loading errors during page initialization or data fetching.
+
+```javascript errorHandler.js:35-40
+export function handleLoadError() {
+    const mainContent = document.querySelector('.main__inner');
+    if (mainContent) {
+        mainContent.innerHTML = '<p class="error-message">Error al cargar los datos del episodio. Por favor, intenta nuevamente.</p>';
+    }
+}
+```
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { handleLoadError } from './utils/errorHandler.js';
+
+try {
+    await loadEpisodeData();
+} catch (error) {
+    console.error('Load failed:', error);
+    handleLoadError();
+}
+```
+
+---
+
+### handleAnimeNotFound
+
+Handles errors when the requested anime cannot be found in the database.
+
+```javascript errorHandler.js:48-54
+export function handleAnimeNotFound() {
+    console.error('El anime solicitado no fue encontrado');
+    const mainContent = document.querySelector('.main__inner');
+    if (mainContent) {
+        mainContent.innerHTML = '<p class="error-message">Error: No se encontró el anime solicitado.</p>';
+    }
+}
+```
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { getAnimeBySlug } from './services/animeService.js';
+import { handleAnimeNotFound } from './utils/errorHandler.js';
+
+const response = await getAnimeBySlug(animeSlug);
+if (!response.success || !response.data) {
+    handleAnimeNotFound();
+}
+```
+
+---
+
+### displayErrorMessage
+
+Displays a custom error message to the user. This is a generic error handler for custom error scenarios.
+
+```javascript errorHandler.js:62-70
+export function displayErrorMessage(message) {
+    const mainContent = document.querySelector('.main__content') || document.querySelector('main');
+    if (mainContent) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message-container';
+        errorDiv.innerHTML = `<p class="error-message">${message}</p>`;
+        mainContent.prepend(errorDiv);
+    }
+}
+```
+
+<ParamField path="message" type="string" required>
+  The custom error message to display to the user
+</ParamField>
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { displayErrorMessage } from './utils/errorHandler.js';
+
+// Display custom error for network issues
+if (!navigator.onLine) {
+    displayErrorMessage('No hay conexión a Internet. Verifica tu conexión e intenta nuevamente.');
+}
+
+// Display validation error
+if (invalidInput) {
+    displayErrorMessage('Por favor, ingresa un término de búsqueda válido.');
+}
+```
+
+<Warning>
+  The `displayErrorMessage` function uses `innerHTML` to inject the error message. Ensure that the `message` parameter is properly sanitized if it contains user-generated content to prevent XSS vulnerabilities.
+</Warning>
+
+## Integration Example
+
+```javascript
+import { 
+  handleMissingSlug, 
+  handleEpisodeNotFound, 
+  handleLoadError,
+  handleAnimeNotFound,
+  displayErrorMessage 
+} from './utils/errorHandler.js';
+import { extractSlugFromURL } from './utils/urlParams.js';
+import { getEpisodeBySlug } from './services/animeService.js';
+
+async function loadWatchPage() {
+    // Check for missing slug
+    const slug = extractSlugFromURL();
+    if (!slug) {
+        handleMissingSlug();
+        return;
+    }
+
+    try {
+        // Attempt to load episode data
+        const response = await getEpisodeBySlug(slug);
+        
+        // Handle not found
+        if (!response.success || !response.data) {
+            handleEpisodeNotFound();
+            return;
+        }
+
+        // Process episode data
+        renderEpisode(response.data);
+        
+    } catch (error) {
+        // Handle general load errors
+        console.error('Failed to load episode:', error);
+        
+        if (error.code === 'NETWORK_ERROR') {
+            displayErrorMessage('Error de red. Verifica tu conexión.');
+        } else if (error.code === 'TIMEOUT') {
+            displayErrorMessage('La solicitud tardó demasiado. Intenta nuevamente.');
+        } else {
+            handleLoadError();
+        }
+    }
+}
+
+loadWatchPage();
+```
+
+## Error Display Behavior
+
+<Note>
+  All error handler functions target specific DOM elements (`.main__inner`, `.main__content`, or `main`) to display error messages. Ensure these elements exist in your HTML structure for proper error display.
+</Note>
+
+### DOM Target Elements
+
+| Function | Target Element |
+|----------|----------------|
+| `handleMissingSlug` | `.main__inner` |
+| `handleEpisodeNotFound` | `.main__inner` |
+| `handleLoadError` | `.main__inner` |
+| `handleAnimeNotFound` | `.main__inner` |
+| `displayErrorMessage` | `.main__content` or `main` |
+
+## See Also
+
+- [URL Parameters](/api/utils/url-params) - For extracting parameters that might be missing
+- [Anime Service](/api/services/anime-service) - For API calls that might throw errors
+- [Validator](/api/utils/validator) - For validating data before processing

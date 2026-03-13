@@ -1,0 +1,327 @@
+---
+title: Video Player
+description: Feature-rich video player with multi-server support, episode navigation, and seamless streaming experience
+---
+
+## Overview
+
+The Video Player is the core component for watching anime episodes. It provides multi-server support, smooth server switching, episode navigation controls, and an embedded iframe-based player with fullscreen capabilities.
+
+## Main Rendering Function
+
+The primary entry point for rendering the video player is `renderVideoPlayer()` from `~/workspace/source/js/components/VideoPlayer.js:34`:
+
+```javascript
+export function renderVideoPlayer(episodeData, prevEpisodeSlug, nextEpisodeSlug, animeSlug) {
+    cacheDOM();
+
+    renderEpisodeTitle(episodeData.title, episodeData.number);
+    renderInitialVideo(episodeData.servers);
+    renderServerButtons(episodeData.servers);
+    renderEpisodeNavigation(prevEpisodeSlug, nextEpisodeSlug, domElementCache);
+    renderReturnButton(animeSlug, domElementCache);
+}
+```
+
+**Parameters:**
+- `episodeData` - Episode information including title, number, and available servers
+- `prevEpisodeSlug` - Slug for the previous episode (null if first episode)
+- `nextEpisodeSlug` - Slug for the next episode (null if last episode)
+- `animeSlug` - Slug of the parent anime for navigation
+
+## DOM Caching
+
+The player uses DOM caching for optimal performance:
+
+```javascript
+let domElementCache = {};
+let animeTitle = '';
+
+function cacheDOM() {
+    domElementCache = {
+        videoTitle: document.getElementById('video-title'),
+        videoWrapper: document.getElementById('video-wrapper'),
+        serversList: document.getElementById('video-servers'),
+        downloadList: document.getElementById('video-downloads'),
+        controls: document.getElementById('video-controls'),
+        navigationButtons: document.getElementById('video-nav'),
+        backButton: document.getElementById('video-back')
+    };
+}
+```
+
+<Note>
+DOM caching reduces repeated DOM queries, improving performance especially during server switches and navigation.
+</Note>
+
+## Video Rendering
+
+### Episode Title
+
+Displays the anime title and episode number:
+
+```javascript
+function renderEpisodeTitle(title, episodeNumber) {
+    animeTitle = title;
+    
+    const titleElement = document.createElement('p');
+    titleElement.textContent = `${title} - Episodio ${episodeNumber}`;
+    titleElement.className = 'video-title';
+    
+    domElementCache.videoTitle.appendChild(titleElement);
+}
+```
+
+### Initial Video Load
+
+Loads the first available server or displays an error:
+
+```javascript
+function renderInitialVideo(servers) {
+    if (!servers || servers.length === 0) {
+        const errorMsg = document.createElement('p');
+        errorMsg.textContent = 'No hay servidores disponibles para este episodio.';
+        domElementCache.videoWrapper.appendChild(errorMsg);
+        return;
+    }
+
+    const iframe = createVideoIframe(servers[0].embed);
+    domElementCache.videoWrapper.appendChild(iframe);
+}
+```
+
+### Video Iframe Creation
+
+Creates an iframe with proper attributes for video streaming:
+
+```javascript
+function createVideoIframe(embedUrl) {
+    const iframe = document.createElement('iframe');
+    iframe.src = embedUrl;
+    iframe.className = 'main__player-iframe';
+    iframe.allowFullscreen = true;
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+    
+    return iframe;
+}
+```
+
+<Accordion title="Iframe Permissions">
+The iframe is configured with the following permissions:
+- **accelerometer** - For mobile device orientation
+- **autoplay** - Allows videos to autoplay
+- **clipboard-write** - Enables copy functionality
+- **encrypted-media** - Required for DRM content
+- **gyroscope** - For VR/360 video support
+- **picture-in-picture** - Enables PiP mode
+</Accordion>
+
+## Server Selection
+
+### Server Buttons
+
+Renders interactive buttons for each available server:
+
+```javascript
+function renderServerButtons(servers) {
+    servers.forEach((server, index) => {
+        if (!server.embed) return;
+
+        const button = createServerButton(server, index === 0);
+        
+        button.addEventListener('click', () => {
+            handleServerChange(button, server.embed);
+        });
+        
+        domElementCache.serversList.appendChild(button);
+    });
+}
+```
+
+### Creating Server Buttons
+
+Each server button includes accessibility attributes:
+
+```javascript
+function createServerButton(server, isActive) {
+    const button = document.createElement('button');
+    button.className = 'main__servers-btn';
+    button.textContent = server.name;
+    button.dataset.embedUrl = server.embed;
+    button.setAttribute('aria-label', `Seleccionar servidor ${server.name}`);
+    button.setAttribute('title', `Ver en ${server.name}`);
+    
+    if (isActive) {
+        button.classList.add('main__servers-btn--active');
+        button.setAttribute('aria-pressed', 'true');
+    }
+    
+    return button;
+}
+```
+
+<Note>
+The first server in the array is automatically marked as active when the player loads.
+</Note>
+
+## Server Switching
+
+Handles smooth transitions between different video servers:
+
+```javascript
+function handleServerChange(serverButton, embedUrl) {
+    // Remover estado activo de todos los botones
+    document.querySelectorAll('.main__servers-btn').forEach(btn => {
+        btn.classList.remove('main__servers-btn--active');
+        btn.setAttribute('aria-pressed', 'false');
+    });
+    
+    // Marcar nuevo botón como activo
+    serverButton.classList.add('main__servers-btn--active');
+    serverButton.setAttribute('aria-pressed', 'true');
+    
+    // Actualizar video
+    updateVideoSource(embedUrl);
+}
+```
+
+### Video Source Update
+
+Updates the iframe source with a brief reset to force reload:
+
+```javascript
+function updateVideoSource(embedUrl) {
+    const iframe = document.querySelector('.main__player-iframe');
+    
+    if (iframe) {
+        iframe.src = '';
+        setTimeout(() => {
+            iframe.src = embedUrl;
+        }, 100);
+    }
+}
+```
+
+<Accordion title="Why Reset the Source?">
+The source is briefly reset to an empty string before setting the new URL. This ensures the browser properly loads the new video source and prevents caching issues that could cause the old video to continue playing.
+</Accordion>
+
+## Episode Navigation
+
+The player integrates with the navigation system to provide seamless episode switching:
+
+```javascript
+import { renderEpisodeNavigation, renderReturnButton } from "./Navbar.js";
+
+renderEpisodeNavigation(prevEpisodeSlug, nextEpisodeSlug, domElementCache);
+renderReturnButton(animeSlug, domElementCache);
+```
+
+**Navigation Features:**
+- Previous episode button (disabled if first episode)
+- Next episode button (disabled if last episode)
+- Return to anime detail button
+
+## Usage Example
+
+### Basic Implementation
+
+```javascript
+import { renderVideoPlayer } from '../components/VideoPlayer.js';
+import { getEpisodeBySlug } from '../services/animeService.js';
+
+// Fetch episode data
+const episodeData = await getEpisodeBySlug('anime-episode-1');
+
+// Episode data structure
+const episode = {
+    title: 'My Anime Title',
+    number: 1,
+    servers: [
+        { name: 'Server 1', embed: 'https://server1.example.com/embed/123' },
+        { name: 'Server 2', embed: 'https://server2.example.com/embed/123' },
+        { name: 'Server 3', embed: 'https://server3.example.com/embed/123' }
+    ]
+};
+
+// Render the player
+renderVideoPlayer(
+    episode,
+    'anime-episode-0',  // Previous episode slug
+    'anime-episode-2',  // Next episode slug
+    'my-anime-title'    // Anime slug
+);
+```
+
+### Handling Missing Servers
+
+```javascript
+const episodeWithNoServers = {
+    title: 'My Anime',
+    number: 5,
+    servers: []
+};
+
+// The player will display: "No hay servidores disponibles para este episodio."
+renderVideoPlayer(episodeWithNoServers, 'ep-4', 'ep-6', 'anime-slug');
+```
+
+## Server Data Structure
+
+Servers must follow this structure:
+
+```javascript
+{
+    name: string,      // Display name for the server
+    embed: string      // Full embed URL for the video
+}
+```
+
+<CodeGroup>
+```javascript Valid Server
+{
+    name: 'StreamTape',
+    embed: 'https://streamtape.com/e/xyz123/video.mp4'
+}
+```
+
+```javascript Invalid Server (Skipped)
+{
+    name: 'Broken Server',
+    embed: null  // Will be skipped during rendering
+}
+```
+</CodeGroup>
+
+## Player Features
+
+<Card title="Multi-Server Support" icon="server">
+Switch between multiple video servers without losing your place. The player automatically selects the first available server.
+</Card>
+
+<Card title="Fullscreen Mode" icon="expand">
+Built-in fullscreen support through the `allowFullscreen` iframe attribute.
+</Card>
+
+<Card title="Episode Navigation" icon="arrow-right">
+Seamlessly navigate between episodes with previous/next controls.
+</Card>
+
+<Card title="Accessibility" icon="universal-access">
+ARIA labels and proper button states for screen reader support.
+</Card>
+
+## Integration Points
+
+The video player integrates with:
+
+- **animeService.js** - Fetches episode data and server information
+- **Navbar.js** - Provides episode navigation controls
+- **urlParams.js** - Extracts episode slug from URL parameters
+- **errorHandler.js** - Displays error messages for failed loads
+
+## Related Features
+
+- [Anime Browsing](/features/anime-browsing) - Discover episodes to watch
+- [Search](/features/search) - Find specific episodes
+- [Authentication](/features/authentication) - Track watch progress

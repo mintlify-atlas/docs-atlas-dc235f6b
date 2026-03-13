@@ -1,0 +1,206 @@
+---
+title: "AnimeCard"
+description: "Component for rendering anime cards in grid layout with cover, title, and optional badge"
+---
+
+## Overview
+
+The AnimeCard component renders anime cards in a grid layout. Each card displays a cover image, title, and optional badge. It handles navigation to either anime detail pages or directly to episode pages.
+
+**File Location:** `source/js/components/AnimeCard.js`
+
+## Exported Functions
+
+### renderAnimeCards()
+
+Renders multiple anime cards into a container using a document fragment for optimal performance.
+
+```javascript
+renderAnimeCards(animes, container)
+```
+
+<ParamField path="animes" type="Array<Object>" required>
+  Array of anime objects to render as cards
+  
+  Each anime object should contain:
+  - `title` (string): Anime title
+  - `cover` (string): URL to cover image
+  - `slug` (string): Anime slug for navigation
+  - `type` (string): Badge text (optional)
+</ParamField>
+
+<ParamField path="container" type="HTMLElement" required>
+  DOM element where the cards will be appended
+</ParamField>
+
+**Returns:** `void`
+
+#### Example
+
+```javascript
+import { renderAnimeCards } from './components/AnimeCard.js';
+
+const animes = [
+  {
+    title: 'One Piece',
+    cover: 'https://example.com/one-piece.jpg',
+    slug: 'one-piece',
+    type: 'TV'
+  },
+  {
+    title: 'Naruto',
+    cover: 'https://example.com/naruto.jpg',
+    slug: 'naruto',
+    type: 'TV'
+  }
+];
+
+const container = document.querySelector('.anime-grid');
+renderAnimeCards(animes, container);
+```
+
+---
+
+### renderAnimeCard()
+
+Creates a single anime card with cover, title, and optional badge.
+
+```javascript
+renderAnimeCard(anime, badgeText = null, isDetailView = true)
+```
+
+<ParamField path="anime" type="Object" required>
+  Anime data object
+  
+  **Properties:**
+  - `title` (string): Anime title
+  - `cover` (string): URL to cover image
+  - `slug` (string): Anime slug for navigation
+</ParamField>
+
+<ParamField path="badgeText" type="string | null" default="null">
+  Text to display in the badge (e.g., "Episodio 3"). Set to `null` to hide the badge.
+</ParamField>
+
+<ParamField path="isDetailView" type="boolean" default="true">
+  Navigation behavior:
+  - `true`: Navigate to anime detail page
+  - `false`: Navigate directly to episode
+</ParamField>
+
+**Returns:** `HTMLElement` - Article element ready to insert into the DOM
+
+#### Card Structure
+
+The generated card has the following structure:
+
+```html
+<article class="anime-card" data-anime-slug="{slug}">
+  <a class="anime-card__a" href="#" title="Ver detalles de {title}">
+    <img class="anime-card__image" src="{cover}" alt="Portada de {title}" loading="lazy">
+    <div class="anime-card__badge">{badgeText}</div> <!-- Only if badgeText is provided -->
+  </a>
+  <p class="anime-card__name" title="{title}">{title}</p>
+</article>
+```
+
+#### Example: Detail View Card
+
+```javascript
+import { renderAnimeCard } from './components/AnimeCard.js';
+
+const anime = {
+  title: 'Attack on Titan',
+  cover: 'https://example.com/aot.jpg',
+  slug: 'shingeki-no-kyojin'
+};
+
+const card = renderAnimeCard(anime, 'TV', true);
+document.querySelector('.anime-grid').appendChild(card);
+```
+
+#### Example: Episode Card with Badge
+
+```javascript
+import { renderAnimeCard } from './components/AnimeCard.js';
+
+const episode = {
+  title: 'One Piece',
+  cover: 'https://example.com/one-piece.jpg',
+  slug: 'one-piece-1090'
+};
+
+// Card navigates to episode and shows "Episodio 1090" badge
+const card = renderAnimeCard(episode, 'Episodio 1090', false);
+document.querySelector('.latest-episodes').appendChild(card);
+```
+
+<Note>
+  The card uses lazy loading for images with the `loading="lazy"` attribute to improve page performance.
+</Note>
+
+## Internal Functions
+
+### handleCardNavigation()
+
+Internal function that determines navigation behavior based on the `isDetailView` parameter.
+
+```javascript
+handleCardNavigation(slug, isDetailView)
+```
+
+- Calls `navigateToAnimeDetail(slug)` when `isDetailView` is `true`
+- Calls `navigateToEpisode(slug)` when `isDetailView` is `false`
+
+## CSS Classes
+
+The component uses the following CSS classes:
+
+- `.anime-card` - Main card container
+- `.anime-card__a` - Image link wrapper
+- `.anime-card__image` - Cover image
+- `.anime-card__badge` - Badge overlay (optional)
+- `.anime-card__name` - Title text
+
+## Dependencies
+
+```javascript
+import { navigateToAnimeDetail, navigateToEpisode } from '../utils/navigation.js';
+```
+
+## Best Practices
+
+<CodeGroup>
+```javascript Rendering Multiple Cards
+// Good: Use renderAnimeCards for multiple items
+const animes = await fetchAnimeList();
+const container = document.querySelector('.grid');
+renderAnimeCards(animes, container);
+
+// This uses document fragment for better performance
+```
+
+```javascript Single Card with Badge
+// Create a card for the latest episode
+const latestEpisode = {
+  title: anime.title,
+  cover: anime.cover,
+  slug: `${anime.slug}-${latestEpisodeNumber}`
+};
+
+const card = renderAnimeCard(
+  latestEpisode,
+  `Episodio ${latestEpisodeNumber}`,
+  false  // Navigate directly to episode
+);
+```
+
+```javascript Card Without Badge
+// Simple anime card without badge
+const card = renderAnimeCard(
+  anime,
+  null,  // No badge
+  true   // Navigate to detail page
+);
+```
+</CodeGroup>

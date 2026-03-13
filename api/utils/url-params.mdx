@@ -1,0 +1,252 @@
+---
+title: 'URL Parameters'
+description: 'Utilities for extracting and managing URL query parameters'
+---
+
+## Overview
+
+The URL parameter utilities provide functions for extracting and working with URL query parameters in the AnimeAho client. These utilities simplify parsing search strings and managing page state through URLs.
+
+## Functions
+
+### extractSlugFromURL
+
+Extracts the `slug` parameter from the current URL's query string.
+
+```javascript urlParams.js:6-9
+export function extractSlugFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('slug');
+}
+```
+
+**Returns:** `string | null`
+
+Returns the slug value if present, or `null` if the parameter doesn't exist.
+
+#### Usage Example
+
+```javascript
+import { extractSlugFromURL } from './utils/urlParams.js';
+import { handleMissingSlug } from './utils/errorHandler.js';
+
+// URL: http://example.com/watch.html?slug=one-piece-1045
+const slug = extractSlugFromURL();
+console.log(slug); // Output: "one-piece-1045"
+
+// Validate slug exists
+if (!slug) {
+    handleMissingSlug();
+    return;
+}
+
+// Use slug to fetch episode data
+const episode = await getEpisodeBySlug(slug);
+```
+
+---
+
+### updatePageTitle
+
+Updates the browser tab title with the anime name.
+
+```javascript urlParams.js:16-18
+export function updatePageTitle(animeTitle) {
+    document.title = `AnimeAho - ${animeTitle}`;
+}
+```
+
+<ParamField path="animeTitle" type="string" required>
+  The title of the anime to display in the browser tab
+</ParamField>
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { updatePageTitle } from './utils/urlParams.js';
+import { getAnimeBySlug } from './services/animeService.js';
+
+// Fetch anime data and update page title
+async function loadAnimePage(slug) {
+    const response = await getAnimeBySlug(slug);
+    
+    if (response.success && response.data) {
+        updatePageTitle(response.data.title);
+        // Browser tab now shows: "AnimeAho - One Piece"
+    }
+}
+
+loadAnimePage('one-piece');
+```
+
+---
+
+### extractQueryFromURL
+
+Extracts both the `query` and `page` parameters from the current URL's query string. This is primarily used for search and pagination functionality.
+
+```javascript urlParams.js:25-30
+export function extractQueryFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('query');
+    const page = Number(params.get('page')) || 1;
+    return { query, page };
+}
+```
+
+**Returns:** `{ query: string | null, page: number }`
+
+Returns an object containing:
+- `query`: The search query string, or `null` if not present
+- `page`: The page number as an integer (defaults to `1` if not present or invalid)
+
+#### Usage Example
+
+```javascript
+import { extractQueryFromURL } from './utils/urlParams.js';
+import { searchAnime } from './services/animeService.js';
+
+// URL: http://example.com/search.html?query=naruto&page=2
+const { query, page } = extractQueryFromURL();
+
+console.log(query); // Output: "naruto"
+console.log(page);  // Output: 2
+
+// Perform search with extracted parameters
+if (query) {
+    const results = await searchAnime(query, page);
+    renderSearchResults(results);
+} else {
+    displayErrorMessage('Por favor, ingresa un término de búsqueda.');
+}
+```
+
+## Integration Example
+
+```javascript
+import { 
+  extractSlugFromURL, 
+  updatePageTitle, 
+  extractQueryFromURL 
+} from './utils/urlParams.js';
+import { getEpisodeBySlug, searchAnime } from './services/animeService.js';
+import { handleMissingSlug, displayErrorMessage } from './utils/errorHandler.js';
+
+// Watch page initialization
+async function initWatchPage() {
+    const slug = extractSlugFromURL();
+    
+    if (!slug) {
+        handleMissingSlug();
+        return;
+    }
+    
+    try {
+        const response = await getEpisodeBySlug(slug);
+        
+        if (response.success && response.data) {
+            const episode = response.data;
+            updatePageTitle(`${episode.anime.title} - Episodio ${episode.number}`);
+            renderEpisode(episode);
+        }
+    } catch (error) {
+        console.error('Failed to load episode:', error);
+    }
+}
+
+// Search page initialization
+async function initSearchPage() {
+    const { query, page } = extractQueryFromURL();
+    
+    if (!query) {
+        displayErrorMessage('No se especificó ningún término de búsqueda.');
+        return;
+    }
+    
+    updatePageTitle(`Búsqueda: ${query}`);
+    
+    try {
+        const results = await searchAnime(query, page);
+        renderSearchResults(results, page);
+    } catch (error) {
+        console.error('Search failed:', error);
+    }
+}
+
+// Initialize appropriate page
+const currentPage = window.location.pathname.split('/').pop();
+
+if (currentPage === 'watch.html') {
+    initWatchPage();
+} else if (currentPage === 'search.html') {
+    initSearchPage();
+}
+```
+
+## Advanced Usage: Custom Parameter Extraction
+
+```javascript
+import { extractSlugFromURL } from './utils/urlParams.js';
+
+// Create a generic parameter extractor
+function getURLParam(paramName) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(paramName);
+}
+
+// Extract custom parameters
+const category = getURLParam('category');
+const sort = getURLParam('sort');
+const filter = getURLParam('filter');
+
+// URL: http://example.com/browse.html?category=action&sort=popularity&filter=ongoing
+console.log(category); // "action"
+console.log(sort);     // "popularity"
+console.log(filter);   // "ongoing"
+```
+
+## Page Title Patterns
+
+```javascript
+import { updatePageTitle } from './utils/urlParams.js';
+
+// Different title patterns for different pages
+
+// Episode page
+updatePageTitle(`${animeTitle} - Episodio ${episodeNumber}`);
+// Result: "AnimeAho - One Piece - Episodio 1045"
+
+// Anime detail page
+updatePageTitle(animeTitle);
+// Result: "AnimeAho - One Piece"
+
+// Search results page
+updatePageTitle(`Búsqueda: ${searchQuery}`);
+// Result: "AnimeAho - Búsqueda: naruto"
+
+// Category page
+updatePageTitle(`Categoría: ${categoryName}`);
+// Result: "AnimeAho - Categoría: Acción"
+```
+
+<Note>
+  The `extractQueryFromURL` function automatically converts the `page` parameter to a number and defaults to `1` if the parameter is missing or cannot be parsed. This prevents invalid page numbers from breaking pagination logic.
+</Note>
+
+## URL Parameter Examples
+
+| URL | `extractSlugFromURL()` | `extractQueryFromURL()` |
+|-----|------------------------|-------------------------|
+| `watch.html?slug=naruto-1` | `"naruto-1"` | `{ query: null, page: 1 }` |
+| `search.html?query=bleach&page=3` | `null` | `{ query: "bleach", page: 3 }` |
+| `anime.html?slug=one-piece` | `"one-piece"` | `{ query: null, page: 1 }` |
+| `search.html?query=action` | `null` | `{ query: "action", page: 1 }` |
+| `watch.html` | `null` | `{ query: null, page: 1 }` |
+
+## See Also
+
+- [Navigation](/api/utils/navigation) - For building URLs with parameters
+- [Error Handler](/api/utils/error-handler) - For handling missing parameters
+- [Anime Service](/api/services/anime-service) - For using extracted parameters in API calls

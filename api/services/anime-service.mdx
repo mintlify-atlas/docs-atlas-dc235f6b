@@ -1,0 +1,417 @@
+---
+title: 'Anime Service'
+description: 'HTTP service for fetching anime data from external APIs'
+---
+
+The Anime Service provides functions to interact with anime APIs for retrieving anime information, episodes, and search functionality.
+
+## Import
+
+```javascript
+import {
+  getAnimeBySlug,
+  getEpisodeBySlug,
+  getEpisodeBySlugNumber,
+  getAiringAnimes,
+  getLatestEpisodes,
+  searchAnimeWithText,
+  searchAnimeFilter,
+  searchAnimeWithUrl
+} from './services/animeService.js';
+```
+
+## Functions
+
+### getAnimeBySlug
+
+Retrieves complete information about an anime by its slug identifier.
+
+```javascript
+const result = await getAnimeBySlug('one-piece');
+if (!result.error) {
+  console.log(result.data.title);
+  console.log(result.data.synopsis);
+  console.log(result.data.episode.length);
+}
+```
+
+<ParamField path="animeSlug" type="string" required>
+  The slug identifier of the anime (e.g., 'one-piece', 'naruto-shippuden')
+</ParamField>
+
+**Returns:** `Promise<AnimeBySlugResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="AnimeDetail">
+  <Expandable title="AnimeDetail properties">
+    <ResponseField name="title" type="string">
+      The title of the anime
+    </ResponseField>
+    <ResponseField name="synopsis" type="string">
+      Plot summary of the anime
+    </ResponseField>
+    <ResponseField name="cover" type="string">
+      URL of the cover image
+    </ResponseField>
+    <ResponseField name="genres" type="string[]">
+      List of genre names
+    </ResponseField>
+    <ResponseField name="rating" type="string">
+      Content rating (e.g., 'PG-13', 'R')
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Airing status (e.g., 'Airing', 'Finished')
+    </ResponseField>
+    <ResponseField name="type" type="string">
+      Type of anime (e.g., 'TV', 'Movie', 'OVA')
+    </ResponseField>
+    <ResponseField name="episode" type="AnimeEpisodeItem[]">
+      Array of episode objects with number, slug, and url
+    </ResponseField>
+    <ResponseField name="alternativeTitles" type="string[]">
+      Alternative names for the anime
+    </ResponseField>
+    <ResponseField name="nextAiringEpisode" type="object | null">
+      Information about the next episode to air
+    </ResponseField>
+    <ResponseField name="related" type="RelatedAnime[]">
+      Related anime (sequels, prequels, etc.)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### getEpisodeBySlug
+
+Retrieves information about a specific episode using its slug.
+
+```javascript
+const result = await getEpisodeBySlug('one-piece-1120');
+if (!result.error) {
+  const servers = result.data.servers;
+  servers.forEach(server => {
+    console.log(`${server.name}: ${server.embed}`);
+  });
+}
+```
+
+<ParamField path="episodeSlug" type="string" required>
+  The slug identifier of the episode
+</ParamField>
+
+**Returns:** `Promise<EpisodeBySlugResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="EpisodeDetail">
+  <Expandable title="EpisodeDetail properties">
+    <ResponseField name="title" type="string">
+      Episode title
+    </ResponseField>
+    <ResponseField name="number" type="number">
+      Episode number
+    </ResponseField>
+    <ResponseField name="servers" type="VideoServer[]">
+      Array of video servers with name, embed URL, and download URL
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### getEpisodeBySlugNumber
+
+Retrieves an episode using the anime slug and episode number.
+
+```javascript
+const result = await getEpisodeBySlugNumber('one-piece', 1120);
+if (!result.error) {
+  console.log(`Episode ${result.data.number}: ${result.data.title}`);
+}
+```
+
+<ParamField path="animeSlug" type="string" required>
+  The slug identifier of the anime
+</ParamField>
+
+<ParamField path="episodeNumber" type="number" required>
+  The episode number
+</ParamField>
+
+**Returns:** `Promise<EpisodeBySlugNumberResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="EpisodeDetail">
+  Episode details with title, number, and available video servers
+</ResponseField>
+
+---
+
+### getAiringAnimes
+
+Retrieves a list of currently airing anime series.
+
+```javascript
+const result = await getAiringAnimes();
+if (!result.error) {
+  result.data.forEach(anime => {
+    console.log(`${anime.title} (${anime.type})`);
+  });
+}
+```
+
+**Returns:** `Promise<AiringAnimesResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="AiringAnimeItem[]">
+  Array of currently airing anime
+  <Expandable title="AiringAnimeItem properties">
+    <ResponseField name="title" type="string">
+      Anime title
+    </ResponseField>
+    <ResponseField name="slug" type="string">
+      Anime slug identifier
+    </ResponseField>
+    <ResponseField name="type" type="string">
+      Anime type (TV, Movie, etc.)
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      URL to the anime page
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### getLatestEpisodes
+
+Retrieves the most recently released episodes.
+
+```javascript
+const result = await getLatestEpisodes();
+if (!result.error) {
+  result.data.forEach(episode => {
+    console.log(`${episode.title} - Episode ${episode.number}`);
+  });
+}
+```
+
+**Returns:** `Promise<LatestEpisodesResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="LatestEpisodeItem[]">
+  Array of recent episodes
+  <Expandable title="LatestEpisodeItem properties">
+    <ResponseField name="title" type="string">
+      Anime title
+    </ResponseField>
+    <ResponseField name="number" type="number">
+      Episode number
+    </ResponseField>
+    <ResponseField name="slug" type="string">
+      Episode slug
+    </ResponseField>
+    <ResponseField name="cover" type="string">
+      Cover image URL
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      URL to the episode page
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### searchAnimeWithText
+
+Searches for anime using a text query with pagination and cancellation support.
+
+```javascript
+const controller = new AbortController();
+const result = await searchAnimeWithText('naruto', 1, controller.signal);
+
+if (!result?.error) {
+  console.log(`Found ${result.data.foundPages} pages`);
+  result.data.media.forEach(anime => {
+    console.log(`${anime.title} - ${anime.rating}`);
+  });
+}
+
+// Cancel the request if needed
+controller.abort();
+```
+
+<ParamField path="searchQuery" type="string" required>
+  Search text to find anime
+</ParamField>
+
+<ParamField path="page" type="number" required>
+  Page number for pagination
+</ParamField>
+
+<ParamField path="signal" type="AbortSignal | null" default="null">
+  Optional AbortSignal for canceling the request
+</ParamField>
+
+**Returns:** `Promise<SearchAnimeResponse | ResponseError | undefined>`
+
+<Info>Returns `undefined` if the request is aborted</Info>
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="SearchAnimeDetail">
+  <Expandable title="SearchAnimeDetail properties">
+    <ResponseField name="currentPage" type="number">
+      Current page number
+    </ResponseField>
+    <ResponseField name="foundPages" type="number">
+      Total number of pages found
+    </ResponseField>
+    <ResponseField name="hasNextPage" type="boolean">
+      Whether there is a next page
+    </ResponseField>
+    <ResponseField name="nextPage" type="number | null">
+      Next page number or null
+    </ResponseField>
+    <ResponseField name="previousPage" type="number | null">
+      Previous page number or null
+    </ResponseField>
+    <ResponseField name="media" type="MediaAnime[]">
+      Array of anime search results with cover, title, synopsis, rating, type, and slug
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### searchAnimeFilter
+
+Searches for anime using advanced filters like genres, types, and status.
+
+```javascript
+const result = await searchAnimeFilter({
+  order: 'rating',
+  types: ['tv', 'movie'],
+  genres: ['action', 'adventure'],
+  statuses: [1], // 1=airing, 2=finished, 3=upcoming
+  page: 1
+});
+
+if (!result.error) {
+  console.log(`Found ${result.data.media.length} anime`);
+}
+```
+
+<ParamField path="options" type="object">
+  Filter options object
+  <Expandable title="Filter options">
+    <ParamField path="order" type="string" default="'default'">
+      Sort order: 'default', 'rating', 'title', 'recent'
+    </ParamField>
+    <ParamField path="types" type="string[]" default="[]">
+      Anime types: 'tv', 'movie', 'ova', 'special'
+    </ParamField>
+    <ParamField path="genres" type="string[]" default="[]">
+      Genre filters (e.g., 'action', 'comedy', 'drama')
+    </ParamField>
+    <ParamField path="statuses" type="number[]" default="[]">
+      Status filters: 1 (airing), 2 (finished), 3 (upcoming)
+    </ParamField>
+    <ParamField path="page" type="number" default="1">
+      Page number for pagination
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<SearchAnimeResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="SearchAnimeDetail">
+  Search results with pagination information and media array
+</ResponseField>
+
+---
+
+### searchAnimeWithUrl
+
+Searches for anime using an external URL.
+
+```javascript
+const result = await searchAnimeWithUrl('https://example.com/anime/search?q=naruto');
+if (!result.error) {
+  console.log(`Found ${result.data.media.length} results`);
+}
+```
+
+<ParamField path="searchUrl" type="string" required>
+  External URL to search from
+</ParamField>
+
+**Returns:** `Promise<SearchAnimeResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="SearchAnimeDetail">
+  Search results with pagination and media array
+</ResponseField>
+
+---
+
+## Error Handling
+
+All service functions return either a success response or a `ResponseError` object:
+
+```javascript
+const result = await getAnimeBySlug('invalid-slug');
+
+if (result.error) {
+  console.error('Error:', result.message);
+  console.error('Status:', result.statusCode);
+  console.error('URL:', result.url);
+} else {
+  // Process successful response
+  console.log(result.data);
+}
+```
+
+<ResponseField name="error" type="boolean">
+  True if an error occurred
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error message description
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code (0 for connection errors)
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  The endpoint URL that was called
+</ResponseField>
+
+<ResponseField name="data" type="DataError | null">
+  Additional error data if available
+</ResponseField>

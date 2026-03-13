@@ -1,0 +1,309 @@
+---
+title: 'Response Models'
+description: 'Response wrapper classes for API endpoints'
+---
+
+## ResponseError
+
+Represents an error response from the API (HTTP 400 or 404 errors).
+
+### Properties
+
+<ResponseField name="data" type="DataError | null">
+  Error data object, if available
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error type or code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable error message
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code (e.g., 400, 404)
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  The URL that triggered the error
+</ResponseField>
+
+### DataError
+
+<Expandable title="DataError Properties">
+  <ResponseField name="error" type="string">
+    Error type from the API response
+  </ResponseField>
+  
+  <ResponseField name="success" type="boolean">
+    Success status (typically false for errors)
+  </ResponseField>
+</Expandable>
+
+### Example
+
+```javascript
+try {
+  const response = await client.getAnimeBySlug('invalid-slug');
+} catch (error) {
+  // error is a ResponseError instance
+  console.log(error.statusCode); // 404
+  console.log(error.message); // "Anime not found"
+  console.log(error.url); // API endpoint URL
+}
+```
+
+---
+
+## AnimeBySlugResponse
+
+Response wrapper for the `getAnimeBySlug` method.
+
+### Properties
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="AnimeDetail | null">
+  The anime details, or null if the request failed
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getAnimeBySlug('one-piece');
+
+if (response.success) {
+  console.log(response.data.title); // "One Piece"
+  console.log(response.data.genres); // ["Action", "Adventure", "Fantasy"]
+  console.log(response.data.episode.length); // Number of episodes
+}
+```
+
+### Related Models
+
+- [AnimeDetail](/api/models/anime#animedetail) - The anime details object
+- [AnimeEpisodeItem](/api/models/anime#animeepisodeitem) - Episode items in the `episode` array
+- [RelatedAnime](/api/models/anime#relatedanime) - Related anime in the `related` array
+
+---
+
+## EpisodeBySlugResponse
+
+Response wrapper for the `getEpisodeBySlug` method.
+
+### Properties
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="EpisodeDetail | null">
+  The episode details, or null if the request failed
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getEpisodeBySlug('one-piece-1');
+
+if (response.success) {
+  console.log(response.data.title); // "Romance Dawn"
+  console.log(response.data.number); // 1
+  console.log(response.data.servers); // Array of VideoServer objects
+}
+```
+
+### Related Models
+
+- [EpisodeDetail](/api/models/anime#episodedetail) - The episode details object
+- [VideoServer](/api/models/anime#videoserver) - Video server objects in the `servers` array
+
+---
+
+## EpisodeBySlugNumberResponse
+
+Response wrapper for the `getEpisodeBySlugAndNumber` method.
+
+<Note>
+  This response uses the same `EpisodeDetail` structure as `EpisodeBySlugResponse`.
+</Note>
+
+### Properties
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="EpisodeDetail | null">
+  The episode details, or null if the request failed
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getEpisodeBySlugAndNumber('one-piece', 1);
+
+if (response.success) {
+  console.log(response.data.title); // Episode title
+  console.log(response.data.number); // 1
+  
+  // Access video servers
+  response.data.servers.forEach(server => {
+    console.log(`Server: ${server.name}`);
+    console.log(`Embed: ${server.embed}`);
+  });
+}
+```
+
+### Related Models
+
+- [EpisodeDetail](/api/models/anime#episodedetail) - The episode details object
+- [VideoServer](/api/models/anime#videoserver) - Video server objects
+
+---
+
+## AiringAnimesResponse
+
+Response wrapper for the `getAiringAnimes` method.
+
+### Properties
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="AiringAnimeItem[]">
+  Array of currently airing anime
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getAiringAnimes();
+
+if (response.success) {
+  response.data.forEach(anime => {
+    console.log(`${anime.title} (${anime.type})`);
+    console.log(`Slug: ${anime.slug}`);
+    console.log(`URL: ${anime.url}`);
+  });
+}
+```
+
+### Related Models
+
+- [AiringAnimeItem](/api/models/anime#airinganimeitem) - Individual anime items in the response
+
+---
+
+## LatestEpisodesResponse
+
+Response wrapper for the `getLatestEpisodes` method.
+
+### Properties
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="LatestEpisodeItem[]">
+  Array of the latest released episodes
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getLatestEpisodes();
+
+if (response.success) {
+  response.data.forEach(episode => {
+    console.log(`${episode.title} - Episode ${episode.number}`);
+    console.log(`Cover: ${episode.cover}`);
+    console.log(`URL: ${episode.url}`);
+  });
+}
+```
+
+### Related Models
+
+- [LatestEpisodeItem](/api/models/anime#latestepisodeitem) - Individual episode items in the response
+
+---
+
+## SearchAnimeResponse
+
+Response wrapper for the `searchAnime` method.
+
+### Properties
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="SearchAnimeDetail | null">
+  Paginated search results, or null if the request failed
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.searchAnime('naruto', 1);
+
+if (response.success) {
+  const searchData = response.data;
+  
+  console.log(`Page ${searchData.currentPage} of ${searchData.foundPages}`);
+  console.log(`Found ${searchData.media.length} results`);
+  
+  searchData.media.forEach(anime => {
+    console.log(`${anime.title} (${anime.type})`);
+    console.log(`Rating: ${anime.rating}`);
+  });
+  
+  // Pagination
+  if (searchData.hasNextPage) {
+    const nextResponse = await client.searchAnime('naruto', searchData.nextPage);
+  }
+}
+```
+
+### Related Models
+
+- [SearchAnimeDetail](/api/models/anime#searchanimedetail) - The search results object
+- [MediaAnime](/api/models/anime#mediaanime) - Individual anime items in the search results
+
+---
+
+## Response Structure Pattern
+
+All response classes follow a consistent pattern:
+
+```javascript
+{
+  success: boolean,
+  data: Model | Model[] | null
+}
+```
+
+<Note>
+  When `success` is `false`, the `data` field will be `null`, and an error will be thrown as a `ResponseError` instance.
+</Note>
+
+### Common Usage Pattern
+
+```javascript
+try {
+  const response = await client.someMethod();
+  
+  if (response.success) {
+    // Work with response.data
+    console.log(response.data);
+  }
+} catch (error) {
+  // error is a ResponseError instance
+  console.error(`Error ${error.statusCode}: ${error.message}`);
+}
+```

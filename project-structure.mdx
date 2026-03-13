@@ -1,0 +1,430 @@
+---
+title: Project Structure
+description: Understanding the AnimeAho Client folder organization and architecture
+---
+
+The AnimeAho Client follows a modular architecture with clear separation of concerns. This guide explains the purpose of each directory and provides examples of the files within them.
+
+## Overview
+
+The project is built with vanilla JavaScript using ES6 modules, with no build step or bundler required. All code is organized into logical directories based on functionality.
+
+```
+animeaho-client/
+├── index.html              # Main entry point
+├── anime.html              # Anime detail page
+├── browse.html             # Browse/search page
+├── watch.html              # Video player page
+├── search.html             # Search results page
+├── favorites.html          # User favorites page
+├── register.html           # User registration page
+├── 404.html                # Error page
+├── assets/                 # Static assets
+│   ├── icons/              # Favicon and icon files
+│   └── images/             # Logo and images
+├── css/                    # Stylesheets
+│   ├── index.css           # Home page styles
+│   ├── anime.css           # Anime detail styles
+│   ├── browse.css          # Browse page styles
+│   ├── watch.css           # Video player styles
+│   ├── search.css          # Search page styles
+│   ├── components.css      # Component styles
+│   ├── pages.css           # Global page styles
+│   ├── auth.css            # Authentication styles
+│   └── responsive.css      # Media queries
+└── js/                     # JavaScript modules
+    ├── components/         # Reusable UI components
+    ├── config/             # Configuration files
+    ├── models/             # Data models
+    ├── pages/              # Page-specific logic
+    ├── services/           # API services
+    └── utils/              # Utility functions
+```
+
+## HTML Pages
+
+The application uses multiple HTML pages for different views:
+
+- **`index.html`** - Home page showing latest episodes and airing anime
+- **`anime.html`** - Detailed view of a single anime with episodes
+- **`browse.html`** - Browse anime with filters
+- **`watch.html`** - Video player for watching episodes
+- **`search.html`** - Search results page
+- **`favorites.html`** - User's favorite anime collection
+- **`register.html`** - User registration and login
+- **`404.html`** - Error page for not found resources
+
+<Note>
+  Each HTML page imports its corresponding JavaScript module from `js/pages/` using `<script type="module">` tags.
+</Note>
+
+## Assets Directory
+
+Static files like images and icons:
+
+```
+assets/
+├── icons/
+│   └── favicon.png         # Browser tab icon
+└── images/
+    └── logo-animeaho.png   # Application logo
+```
+
+Example usage in HTML:
+
+```html index.html:18-19
+<a href="index.html">
+    <img src="assets/images/logo-animeaho.png" alt="AnimeAho" class="header__logo">
+</a>
+```
+
+## CSS Directory
+
+Stylesheets are organized by page and component:
+
+```
+css/
+├── pages.css           # Global layout and typography
+├── components.css      # Shared component styles
+├── index.css           # Home page specific styles
+├── anime.css           # Anime detail page styles
+├── browse.css          # Browse page styles
+├── watch.css           # Video player styles
+├── search.css          # Search page styles
+├── auth.css            # Authentication form styles
+└── responsive.css      # Mobile and tablet breakpoints
+```
+
+<Tip>
+  The CSS follows a BEM-like naming convention with the `__` separator for better readability and maintainability.
+</Tip>
+
+## JavaScript Directory Structure
+
+The `js/` directory contains all JavaScript code organized into functional subdirectories.
+
+### Components (`js/components/`)
+
+Reusable UI components that can be used across different pages:
+
+```
+js/components/
+├── AnimeCard.js           # Grid card for anime display
+├── AnimeDetail.js         # Full anime information view
+├── AnimeLink.js           # Clickable anime link items
+├── CommentForm.js         # Comment submission form
+├── CommentItem.js         # Individual comment display
+├── CommentSection.js      # Complete comments section
+├── EpisodeList.js         # Episode list renderer
+├── FavoriteButton.js      # Add/remove favorites button
+├── Modal.js               # Modal dialog component
+├── Navbar.js              # Navigation bar
+├── SearchDropdown.js      # Search results dropdown
+├── SearchDropdownItem.js  # Search result item
+├── UserMenu.js            # User account menu
+└── VideoPlayer.js         # Video player component
+```
+
+**Example Component:** `AnimeCard.js` creates anime cards with cover images and titles:
+
+```javascript js/components/AnimeCard.js:24-63
+import { navigateToAnimeDetail, navigateToEpisode } from '../utils/navigation.js';
+
+/**
+ * Creates an anime card with cover, title and optional badge.
+ * 
+ * @param {Object} anime - Anime data { title, cover, slug }
+ * @param {string|null} badgeText - Badge text (e.g., "Episode 3")
+ * @param {boolean} isDetailView - true = navigate to detail | false = to episode
+ * @returns {HTMLElement} Card ready to insert in DOM
+ */
+export function renderAnimeCard(anime, badgeText = null, isDetailView = true) {
+    const article = document.createElement('article');
+    article.className = 'anime-card';
+    article.setAttribute('data-anime-slug', anime.slug);
+
+    const imageLink = document.createElement('a');
+    imageLink.className = 'anime-card__a';
+    imageLink.href = '#';
+
+    const image = document.createElement('img');
+    image.className = 'anime-card__image';
+    image.src = anime.cover;
+    image.alt = `Portada de ${anime.title}`;
+    image.loading = 'lazy';
+
+    imageLink.appendChild(image);
+
+    if (badgeText) {
+        const badge = document.createElement('div');
+        badge.className = 'anime-card__badge';
+        badge.textContent = badgeText;
+        imageLink.appendChild(badge);
+    }
+
+    const titleElement = document.createElement('p');
+    titleElement.className = 'anime-card__name';
+    titleElement.textContent = anime.title;
+
+    article.appendChild(imageLink);
+    article.appendChild(titleElement);
+
+    imageLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleCardNavigation(anime.slug, isDetailView);
+    });
+
+    return article;
+}
+```
+
+### Configuration (`js/config/`)
+
+Centralized configuration for API endpoints and constants:
+
+```
+js/config/
+├── api.config.js      # API URLs and endpoints
+└── constants.js       # Application constants
+```
+
+**Example:** API configuration defines all backend endpoints:
+
+```javascript js/config/api.config.js:8-23
+// API pública de AnimeFlv
+export const ANIME_API_BASE_URL = 'https://animeflv.ahmedrangel.com';
+
+export const ANIME_ENDPOINTS = {
+    ANIME_SLUG: (slug) => `/api/anime/${slug}`,
+    EPISODE_SLUG: (slug) => `/api/anime/episode/${slug}`,
+    EPISODE_SLUG_NUMER: (slug, number) => `/api/anime/${slug}/episode/${number}`,
+    LIST_ANIMES_ON_AIR: '/api/list/animes-on-air',
+    LATEST_EPISODES: '/api/list/latest-episodes',
+    SEARCH_ANIME: '/api/search',
+    SEARCH_BY_URL: '/api/search/by-url'
+};
+
+// API backend de AnimeAho
+export const BACKEND_API_BASE_URL = 'https://animeaho-backend.vercel.app/api';
+```
+
+### Models (`js/models/`)
+
+Data models that define the structure of API responses:
+
+```
+js/models/
+├── Anime.js       # Anime and episode data models
+├── Comment.js     # Comment data model
+├── Episode.js     # Episode detail model
+└── User.js        # User profile model
+```
+
+**Example:** Anime model classes parse and normalize API responses:
+
+```javascript js/models/Anime.js:22-44
+//* Anime by Slug - Response wrapper
+export class AnimeBySlugResponse {
+    constructor(data) {
+        this.success = data.success
+        this.data = data.data ? new AnimeDetail(data.data) : null
+    }
+}
+
+//* Complete anime detail
+class AnimeDetail {
+    constructor(data) {
+        this.alternativeTitles = data.alternative_titles || []
+        this.cover = data.cover || ''
+        this.episode = (data.episodes || []).map(episode => new AnimeEpisodeItem(episode))
+        this.genres = data.genres || []
+        this.rating = data.rating || ''
+        this.status = data.status || ''
+        this.synopsis = data.synopsis || ''
+        this.title = data.title || ''
+        this.type = data.type || ''
+        this.url = data.url || ''
+        this.nextAiringEpisode = data.next_airing_episode || null
+        this.related = (data.related || []).map(related => new RelatedAnime(related))
+    }
+}
+```
+
+### Pages (`js/pages/`)
+
+Page-specific initialization and logic:
+
+```
+js/pages/
+├── index.js       # Home page initialization
+├── anime.js       # Anime detail page logic
+├── browse.js      # Browse/filter page logic
+├── favorites.js   # Favorites page logic
+└── register.js    # Registration page logic
+```
+
+**Example:** The home page loads multiple sections:
+
+```javascript js/pages/index.js:19-30
+import { getAiringAnimes, getLatestEpisodes, searchAnimeFilter } from '../services/animeService.js';
+import { renderAnimeCard } from '../components/AnimeCard.js';
+
+async function initializeHomePage() {
+    try {
+        await loadAiringAnimes();
+        await loadLatestEpisodes();
+        await loadLatestAnimes();
+        addListenerInput();
+    } catch (error) {
+        console.error('Error al inicializar la página principal:', error);
+        displayErrorMessage('Error al cargar el contenido.');
+    }
+}
+```
+
+### Services (`js/services/`)
+
+API interaction layer that handles all HTTP requests:
+
+```
+js/services/
+├── animeService.js      # Anime API calls
+├── authService.js       # Authentication API
+├── commentService.js    # Comments API
+├── favoriteService.js   # Favorites API
+└── userService.js       # User profile API
+```
+
+**Example:** Anime service provides methods to fetch data:
+
+```javascript js/services/animeService.js:15-31
+import { ANIME_API_BASE_URL, ANIME_ENDPOINTS } from "../config/api.config.js";
+import { AnimeBySlugResponse, ResponseError } from "../models/Anime.js";
+
+/**
+ * Gets complete anime information by slug.
+ */
+export async function getAnimeBySlug(animeSlug) {
+    const endpoint = ANIME_API_BASE_URL + ANIME_ENDPOINTS.ANIME_SLUG(animeSlug);
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        return new AnimeBySlugResponse(data);
+    } catch (error) {
+        console.error("Error al obtener anime:", error);
+        return new ResponseError({...});
+    }
+}
+```
+
+### Utils (`js/utils/`)
+
+Helper functions and utilities:
+
+```
+js/utils/
+├── auth.js           # Authentication helpers
+├── errorHandler.js   # Error handling utilities
+├── helpers.js        # General helper functions
+├── navigation.js     # Navigation utilities
+├── search.js         # Search functionality
+├── storage.js        # LocalStorage wrapper
+├── urlParams.js      # URL parameter handling
+└── validator.js      # Input validation
+```
+
+## Module Import Pattern
+
+The project uses ES6 module imports throughout:
+
+```javascript
+// Import from services
+import { getAnimeBySlug } from '../services/animeService.js';
+
+// Import from components
+import { renderAnimeCard } from '../components/AnimeCard.js';
+
+// Import from config
+import { ANIME_API_BASE_URL } from '../config/api.config.js';
+
+// Import from models
+import { AnimeBySlugResponse } from '../models/Anime.js';
+
+// Import from utils
+import { navigateToAnimeDetail } from '../utils/navigation.js';
+```
+
+<Warning>
+  Always include the `.js` file extension in import statements. ES6 modules in browsers require explicit file extensions.
+</Warning>
+
+## Data Flow
+
+Here's how data flows through the application:
+
+<Steps>
+  <Step title="Page initialization">
+    HTML page loads and executes the corresponding page script from `js/pages/`
+  </Step>
+
+  <Step title="Service call">
+    Page script calls a service function from `js/services/` to fetch data
+  </Step>
+
+  <Step title="API request">
+    Service constructs the endpoint URL using `js/config/api.config.js` and makes a fetch request
+  </Step>
+
+  <Step title="Data modeling">
+    API response is parsed and transformed into a model class from `js/models/`
+  </Step>
+
+  <Step title="Component rendering">
+    Page script passes the model data to component functions from `js/components/`
+  </Step>
+
+  <Step title="DOM update">
+    Components create and return HTML elements that are inserted into the DOM
+  </Step>
+</Steps>
+
+## Best Practices
+
+When working with this structure:
+
+<CardGroup cols={2}>
+  <Card title="Keep components pure" icon="cube">
+    Components should only handle rendering and user interaction, not data fetching.
+  </Card>
+  
+  <Card title="Use services for API calls" icon="cloud">
+    All HTTP requests should go through service modules for consistency.
+  </Card>
+  
+  <Card title="Define data with models" icon="database">
+    Always parse API responses through model classes for type safety.
+  </Card>
+  
+  <Card title="Extract common logic" icon="screwdriver-wrench">
+    Reusable functionality belongs in `js/utils/` modules.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Components Guide" icon="puzzle-piece" href="/development/components">
+    Learn how to use and create components
+  </Card>
+  <Card title="API Services" icon="server" href="/api/services/anime-service">
+    Explore available service methods
+  </Card>
+  <Card title="Data Models" icon="shapes" href="/api/models/anime">
+    Understand the data structures
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    Learn about the application architecture
+  </Card>
+</CardGroup>

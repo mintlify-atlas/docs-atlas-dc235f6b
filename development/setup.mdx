@@ -1,0 +1,207 @@
+---
+title: Development Setup
+description: Set up your local development environment for AnimeAho Client
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- A modern web browser (Chrome, Firefox, Edge, or Safari)
+- A local web server (Live Server, Python HTTP server, or similar)
+- A code editor (VS Code, WebStorm, or your preferred IDE)
+- Git for version control
+
+## Project Structure
+
+The AnimeAho Client follows a clean, organized structure:
+
+```
+source/
+├── index.html              # Home page
+├── anime.html              # Anime detail page
+├── watch.html              # Video player page
+├── search.html             # Search results page
+├── browse.html             # Browse animes page
+├── css/                    # Stylesheets
+│   ├── pages.css          # Global styles & variables
+│   ├── index.css          # Home page styles
+│   ├── anime.css          # Anime detail styles
+│   ├── watch.css          # Watch page styles
+│   ├── search.css         # Search page styles
+│   └── responsive.css     # Media queries
+├── js/
+│   ├── components/        # Reusable UI components
+│   ├── pages/             # Page-specific logic
+│   ├── services/          # API service layer
+│   ├── models/            # Data models
+│   ├── config/            # Configuration files
+│   └── utils/             # Utility functions
+└── assets/                # Images, icons, fonts
+```
+
+## Local Development Server
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone <repository-url>
+    cd source
+    ```
+  </Step>
+
+  <Step title="Start a Local Server">
+    Choose one of the following methods:
+
+    <Tabs>
+      <Tab title="VS Code Live Server">
+        1. Install the **Live Server** extension
+        2. Right-click on `index.html`
+        3. Select **Open with Live Server**
+      </Tab>
+
+      <Tab title="Python">
+        ```bash
+        # Python 3
+        python -m http.server 8000
+        ```
+        Then open `http://localhost:8000`
+      </Tab>
+
+      <Tab title="Node.js">
+        ```bash
+        npx http-server -p 8000
+        ```
+        Then open `http://localhost:8000`
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Verify Setup">
+    Navigate to `http://localhost:8000` (or your server's URL) and verify:
+    - The home page loads correctly
+    - Anime cards display properly
+    - Navigation works between pages
+    - Browser console shows no critical errors
+  </Step>
+</Steps>
+
+<Note>
+  The application uses ES6 modules, so you **must** run it through a local server. Opening HTML files directly in the browser will cause CORS errors.
+</Note>
+
+## Directory Deep Dive
+
+### Components (`js/components/`)
+
+Reusable UI components that render dynamic content:
+
+- `AnimeCard.js` - Renders anime/episode cards
+- `AnimeLink.js` - Creates anime links for sidebars
+- `Navbar.js` - Navigation bar component
+- `VideoPlayer.js` - Video player wrapper
+- `EpisodeList.js` - Episode list renderer
+- `CommentSection.js` - Comments functionality
+
+### Pages (`js/pages/`)
+
+Page-specific initialization and logic:
+
+- `index.js` - Home page (latest episodes, airing animes)
+- `anime.js` - Anime detail page
+- `watch.js` - Video player page
+- `search.js` - Search results page
+- `browse.js` - Browse animes page
+
+### Services (`js/services/`)
+
+API communication layer:
+
+- `animeService.js` - Anime and episode data fetching
+- `userService.js` - Authentication and user profiles
+- `commentService.js` - Comments CRUD operations
+- `favoriteService.js` - Favorites management
+
+### Configuration (`js/config/`)
+
+Centralized configuration:
+
+```javascript js/config/api.config.js
+// API pública de AnimeFlv
+export const ANIME_API_BASE_URL = 'https://animeflv.ahmedrangel.com';
+
+// API backend de AnimeAho
+export const BACKEND_API_BASE_URL = 'https://animeaho-backend.vercel.app/api';
+
+export const ANIME_ENDPOINTS = {
+    ANIME_SLUG: (slug) => `/api/anime/${slug}`,
+    EPISODE_SLUG: (slug) => `/api/anime/episode/${slug}`,
+    LATEST_EPISODES: '/api/list/latest-episodes',
+    SEARCH_ANIME: '/api/search'
+};
+```
+
+## Development Workflow
+
+<Steps>
+  <Step title="Make Changes">
+    Edit files in the `source/` directory. Changes to HTML, CSS, and JS files will be reflected immediately.
+  </Step>
+
+  <Step title="Test Locally">
+    - Test in multiple browsers
+    - Check responsive behavior (mobile, tablet, desktop)
+    - Monitor browser console for errors
+    - Verify network requests in DevTools
+  </Step>
+
+  <Step title="Debug Issues">
+    Use browser DevTools:
+    - **Console**: Check for JavaScript errors
+    - **Network**: Monitor API calls
+    - **Elements**: Inspect DOM and styles
+    - **Sources**: Set breakpoints in JavaScript
+  </Step>
+</Steps>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="CORS errors when loading modules">
+    You must use a local web server. File protocol (`file://`) doesn't support ES6 modules.
+
+    **Solution**: Use Live Server, Python HTTP server, or any local server.
+  </Accordion>
+
+  <Accordion title="API requests failing">
+    Check if the API endpoints are accessible:
+    - `https://animeflv.ahmedrangel.com` (public API)
+    - `https://animeaho-backend.vercel.app/api` (backend API)
+
+    **Solution**: Verify network connectivity and API status.
+  </Accordion>
+
+  <Accordion title="Styles not applying">
+    Ensure CSS files are loaded in the correct order:
+    1. `pages.css` (global styles & variables)
+    2. Page-specific CSS (`index.css`, `anime.css`, etc.)
+    3. `responsive.css` (media queries)
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Components" icon="cube" href="/development/components">
+    Learn how to build reusable UI components
+  </Card>
+  <Card title="Add New Pages" icon="file-plus" href="/development/adding-pages">
+    Step-by-step guide to adding new pages
+  </Card>
+  <Card title="Styling Guide" icon="palette" href="/development/styling">
+    CSS architecture and theming system
+  </Card>
+  <Card title="API Integration" icon="plug" href="/api/services/anime-service">
+    Connect to backend services
+  </Card>
+</CardGroup>

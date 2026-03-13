@@ -1,0 +1,608 @@
+---
+title: Styling Guide
+description: CSS architecture, design system, and responsive design patterns
+---
+
+## CSS Architecture
+
+AnimeAho Client uses a modular CSS architecture with three main layers:
+
+1. **Global Styles** (`pages.css`) - Variables, resets, common components
+2. **Page-Specific Styles** (`index.css`, `anime.css`, etc.) - Page layouts
+3. **Responsive Styles** (`responsive.css`) - Media queries for all breakpoints
+
+<Note>
+  CSS files must be loaded in this exact order for styles to cascade correctly.
+</Note>
+
+## Design System
+
+### CSS Variables
+
+All colors, fonts, and spacing are defined as CSS variables in `pages.css`:
+
+```css css/pages.css
+:root {
+    /* Typography */
+    --font-display: 'Exo 2', sans-serif;
+    --font-body: 'Nunito', sans-serif;
+
+    /* Colors */
+    --color-bg:            #04132e;
+    --color-bg-card:       #071e45;
+    --color-header:        #071d42;
+    --color-footer:        #06296b;
+    --color-accent:        #1a6bc4;
+    --color-accent-glow:   rgba(26, 107, 196, 0.35);
+    --color-accent-alt:    #3392ff;
+    --color-text:          #eef2ff;
+    --color-text-muted:    #7a9cc4;
+    --color-border:        rgba(255, 255, 255, 0.07);
+    --color-sidebar-hover: rgba(26, 107, 196, 0.15);
+}
+```
+
+### Using CSS Variables
+
+Always use CSS variables for consistency:
+
+```css
+/* ✅ Good: Uses CSS variables */
+.my-component {
+    background-color: var(--color-bg-card);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    font-family: var(--font-body);
+}
+
+/* ❌ Bad: Hardcoded values */
+.my-component {
+    background-color: #071e45;
+    color: #eef2ff;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    font-family: 'Nunito', sans-serif;
+}
+```
+
+## Component Styling Patterns
+
+### BEM Naming Convention
+
+AnimeAho uses BEM (Block Element Modifier) for CSS class names:
+
+```css
+/* Block */
+.anime-card { }
+
+/* Element */
+.anime-card__image { }
+.anime-card__name { }
+.anime-card__badge { }
+
+/* Modifier */
+.anime-card--episode { }
+.anime-card--featured { }
+```
+
+### Real Example: AnimeCard Styles
+
+```css css/index.css
+/* Card container */
+.anime-card {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+/* Card link wrapper */
+.anime-card__a {
+    display: block;
+    width: 100%;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.anime-card__a:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 
+                0 0 0 1px rgba(51, 146, 255, 0.5);
+    cursor: pointer;
+}
+
+/* Hover overlay effect */
+.anime-card__a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(4, 19, 46, 0.65) 0%, transparent 55%);
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+
+.anime-card__a:hover::after {
+    opacity: 1;
+}
+
+/* Card image */
+.anime-card__image {
+    display: block;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: filter 0.25s ease;
+}
+
+.anime-card__a:hover .anime-card__image {
+    filter: brightness(1.08);
+}
+
+/* Card title */
+.anime-card__name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-text);
+    padding: 0 2px 2px;
+    letter-spacing: 0.01em;
+}
+
+/* Episode badge */
+.anime-card__badge {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: linear-gradient(135deg, #1558a8, #2484e8);
+    color: white;
+    font-size: 0.68rem;
+    font-weight: 800;
+    font-family: var(--font-display);
+    padding: 3px 9px;
+    border-radius: 5px;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    z-index: 1;
+}
+```
+
+## Layout Patterns
+
+### Header Layout
+
+```css css/pages.css
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--color-header);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.55);
+}
+
+.header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 32px;
+    max-width: 1800px;
+    margin: 0 auto;
+    gap: 20px;
+}
+```
+
+### Grid Layouts
+
+```css css/index.css
+:root {
+    --card-width:    175px;
+    --card-gap:      20px;
+    --ep-card-width:  230px;
+    --ep-card-height: 140px;
+    --ep-gap:         18px;
+}
+
+.main__animes-container {
+    display: grid;
+    margin-top: 0.25rem;
+}
+
+#latest-episodes.main__animes-container {
+    grid-template-columns: repeat(var(--ep-grid-cols), var(--ep-card-width));
+    gap: var(--ep-gap);
+}
+
+#latest-animes.main__animes-container {
+    grid-template-columns: repeat(var(--grid-cols), var(--card-width));
+    gap: var(--card-gap);
+}
+```
+
+### Sidebar Layout
+
+```css css/index.css
+.main__inner {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.main__sidebar {
+    position: sticky;
+    color: var(--color-text);
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    flex-shrink: 0;
+    top: 88px;
+    max-height: calc(100vh - 108px);
+    overflow-y: auto;
+    padding-right: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) transparent;
+}
+
+.main__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+    min-width: 0;
+    padding-left: 40px;
+    border-left: 1px solid var(--color-border);
+}
+```
+
+## Responsive Design
+
+### Breakpoints
+
+AnimeAho uses these standard breakpoints:
+
+```css
+/* Desktop Medium */
+@media (max-width: 1400px) { }
+
+/* Desktop Small / Tablet Large */
+@media (max-width: 1150px) { }
+
+/* Tablet */
+@media (max-width: 900px) { }
+
+/* Mobile Large */
+@media (max-width: 640px) { }
+
+/* Mobile Small */
+@media (max-width: 521px) { }
+
+/* Mobile Tiny */
+@media (max-width: 360px) { }
+```
+
+### Responsive Grid Example
+
+```css css/responsive.css
+/* Base: Auto-fill responsive grid */
+#latest-episodes.main__animes-container {
+    grid-template-columns: repeat(auto-fill, minmax(var(--ep-card-width), 1fr));
+}
+
+#latest-animes.main__animes-container {
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
+}
+
+/* Tablet: Adjust card sizes */
+@media (max-width: 900px) {
+    :root {
+        --card-width:     145px;
+        --ep-card-width:  170px;
+        --ep-card-height: 115px;
+    }
+}
+
+/* Mobile: Fixed 2-column grid */
+@media (max-width: 640px) {
+    :root {
+        --card-width:     130px;
+        --ep-card-width:  150px;
+        --ep-card-height: 100px;
+        --card-gap:       10px;
+        --ep-gap:         10px;
+    }
+
+    #search-animes.main__animes-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+```
+
+### Mobile-First Sidebar
+
+```css css/responsive.css
+/* Tablet: Convert vertical sidebar to horizontal scroll */
+@media (max-width: 900px) {
+    .main__sidebar {
+        width: 100%;
+        min-width: unset;
+        position: static;
+        max-height: 180px;
+        padding-right: 0;
+        padding-bottom: 12px;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .main__airing-list {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .main__airing-list li {
+        flex-shrink: 0;
+        background-color: rgba(26, 107, 196, 0.1);
+        border: 1px solid var(--color-border);
+        border-radius: 20px;
+    }
+}
+```
+
+## Interactive Effects
+
+### Hover Effects
+
+```css
+/* Card hover lift */
+.anime-card__a {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.anime-card__a:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Link underline animation */
+.header__nav a {
+    position: relative;
+    transition: color 0.2s;
+}
+
+.header__nav a::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: var(--color-accent-alt);
+    border-radius: 99px;
+    transition: width 0.25s ease;
+}
+
+.header__nav a:hover::after {
+    width: 100%;
+}
+```
+
+### Focus States
+
+```css
+/* Search input focus */
+.header__search:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+/* Button focus */
+button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+```
+
+## Custom Scrollbar
+
+```css css/pages.css
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-accent);
+    border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent-alt);
+}
+
+/* Firefox */
+.main__sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) transparent;
+}
+```
+
+## Typography
+
+### Font Hierarchy
+
+```css
+/* Page title */
+.main__section-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+/* Body text */
+body {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+/* Small text */
+.anime-card__name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+```
+
+## Styling Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use CSS variables for all colors">
+    ```css
+    /* ✅ Good */
+    .component {
+        color: var(--color-text);
+        background: var(--color-bg-card);
+    }
+
+    /* ❌ Bad */
+    .component {
+        color: #eef2ff;
+        background: #071e45;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Follow BEM naming convention">
+    ```css
+    /* ✅ Good: Clear BEM structure */
+    .anime-card { }
+    .anime-card__image { }
+    .anime-card__title { }
+    .anime-card--featured { }
+
+    /* ❌ Bad: Generic or nested names */
+    .card { }
+    .card .image { }
+    .featured-card { }
+    ```
+  </Accordion>
+
+  <Accordion title="Use logical properties when possible">
+    ```css
+    /* ✅ Good: Logical properties */
+    .element {
+        padding-inline: 1rem;
+        margin-block-end: 2rem;
+        inset: 0;
+    }
+
+    /* ❌ OK but less flexible */
+    .element {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        margin-bottom: 2rem;
+        top: 0; right: 0; bottom: 0; left: 0;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Optimize transitions and animations">
+    ```css
+    /* ✅ Good: Smooth performance */
+    .element {
+        transition: transform 0.25s ease, opacity 0.25s ease;
+        will-change: transform;
+    }
+
+    /* ❌ Bad: Janky animations */
+    .element {
+        transition: all 0.25s;
+        /* Animates everything including layout properties */
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Responsive Styles
+
+<Steps>
+  <Step title="Open DevTools">
+    Press `F12` or right-click and select "Inspect"
+  </Step>
+
+  <Step title="Toggle Device Toolbar">
+    Press `Ctrl+Shift+M` (Windows/Linux) or `Cmd+Shift+M` (Mac)
+  </Step>
+
+  <Step title="Test Breakpoints">
+    Test these common viewport widths:
+    - 1920px (Desktop HD)
+    - 1366px (Laptop)
+    - 900px (Tablet)
+    - 640px (Mobile Large)
+    - 375px (Mobile Small)
+  </Step>
+
+  <Step title="Verify Layout">
+    Check:
+    - Text is readable at all sizes
+    - Images scale properly
+    - Navigation is accessible
+    - No horizontal scroll
+    - Touch targets are 44px+ on mobile
+  </Step>
+</Steps>
+
+## Accessibility
+
+```css
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+/* Hide elements visually but keep for screen readers */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Ensure sufficient contrast */
+.text {
+    color: var(--color-text); /* #eef2ff on #04132e = 13.82:1 */
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Components" icon="cube" href="/development/components">
+    Build styled components
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/services/anime-service">
+    Connect your styled pages to data
+  </Card>
+</CardGroup>

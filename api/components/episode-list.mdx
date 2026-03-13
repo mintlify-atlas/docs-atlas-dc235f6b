@@ -1,0 +1,411 @@
+---
+title: "EpisodeList"
+description: "Component for rendering and managing anime episode lists with sorting and dynamic cover loading"
+---
+
+## Overview
+
+The EpisodeList component handles rendering and managing lists of anime episodes. It supports ascending/descending sorting, dynamic episode cover loading with fallback images, and automatic episode existence validation.
+
+**File Location:** `source/js/components/EpisodeList.js`
+
+## Exported Functions
+
+### initializeEpisodeList()
+
+Initializes DOM references for the episode list container and sort selector.
+
+```javascript
+initializeEpisodeList(listContainerId, sortSelectorId)
+```
+
+<ParamField path="listContainerId" type="string" required>
+  ID of the container element where episode cards will be rendered
+</ParamField>
+
+<ParamField path="sortSelectorId" type="string" required>
+  ID of the select element for sorting episodes
+</ParamField>
+
+**Returns:** `void`
+
+#### Example
+
+```javascript
+import { initializeEpisodeList } from './components/EpisodeList.js';
+
+// Initialize with your DOM element IDs
+initializeEpisodeList('episode-list-container', 'episode-sort-select');
+```
+
+<Note>
+  Call this function before using `renderEpisodesList()` to ensure DOM references are cached.
+</Note>
+
+---
+
+### renderEpisodesList()
+
+Renders the complete episode list with initial sorting and activates the sort listener.
+
+```javascript
+renderEpisodesList(episodeList, animeCoverUrl)
+```
+
+<ParamField path="episodeList" type="Array<Object>" required>
+  Array of episode objects
+  
+  Each episode should contain:
+  - `number` (number): Episode number
+  - `slug` (string): Episode slug for navigation
+</ParamField>
+
+<ParamField path="animeCoverUrl" type="string" required>
+  URL of the anime's cover image, used to construct episode cover URLs
+</ParamField>
+
+**Returns:** `void`
+
+**Default Behavior:**
+- Episodes are initially sorted in descending order (newest first)
+- Activates the sort selector event listener
+- Automatically attempts to load episode-specific covers
+
+#### Example
+
+```javascript
+import { initializeEpisodeList, renderEpisodesList } from './components/EpisodeList.js';
+
+// Initialize first
+initializeEpisodeList('episode-list', 'episode-sort');
+
+// Render episodes
+const episodes = [
+  { number: 1, slug: 'one-piece-1' },
+  { number: 2, slug: 'one-piece-2' },
+  { number: 3, slug: 'one-piece-3' }
+];
+
+const animeCover = 'https://cdn.animeflv.net/cover/12345.jpg';
+
+renderEpisodesList(episodes, animeCover);
+```
+
+---
+
+### createEpisodeCard()
+
+Creates an individual episode card with cover image, number, and click handling.
+
+```javascript
+createEpisodeCard(episode, animeCoverUrl)
+```
+
+<ParamField path="episode" type="Object" required>
+  Episode data
+  
+  **Properties:**
+  - `number` (number): Episode number
+  - `slug` (string): Episode slug for navigation
+</ParamField>
+
+<ParamField path="animeCoverUrl" type="string" required>
+  URL of the anime's cover image
+</ParamField>
+
+**Returns:** `HTMLElement` - Episode card container
+
+**Important:** The card is initially hidden (`display: none`) and only becomes visible after:
+- The episode cover image loads successfully, OR
+- A fallback image is applied after validating the episode exists
+
+#### Card Structure
+
+```html
+<div class="main__anime-episode" style="display: none;">
+  <a href="#" title="Ver episodio {number}">
+    <img class="main__anime-episode-cover" alt="Portada del episodio {number}">
+  </a>
+  <p class="main__anime-episode-number">Episodio {number}</p>
+</div>
+```
+
+#### Example
+
+```javascript
+import { createEpisodeCard } from './components/EpisodeList.js';
+
+const episode = {
+  number: 1090,
+  slug: 'one-piece-1090'
+};
+
+const animeCover = 'https://cdn.animeflv.net/cover/12345.jpg';
+const card = createEpisodeCard(episode, animeCover);
+
+document.querySelector('.episode-grid').appendChild(card);
+```
+
+## Episode Cover URL Generation
+
+The component automatically generates episode cover URLs from the anime cover URL:
+
+```javascript
+// Anime cover: https://cdn.animeflv.net/cover/12345.jpg
+// Episode 10 cover: https://cdn.animeflv.net/screenshots/12345/10/th_3.jpg
+```
+
+**Base URL:** `https://cdn.animeflv.net/screenshots`
+
+**Format:** `{BASE_URL}/{animeId}/{episodeNumber}/th_3.jpg`
+
+### Fallback Behavior
+
+If the episode cover fails to load:
+
+1. **Validate Episode Exists:** Makes an API call to verify the episode exists
+2. **If Episode Exists:** Shows fallback image (`assets/images/broken_image.png`)
+3. **If Episode Doesn't Exist:** Removes the card from the DOM entirely
+
+<CodeGroup>
+```javascript Cover Loads Successfully
+// Episode cover exists and loads
+// Card becomes visible immediately
+```
+
+```javascript Cover Fails, Episode Exists
+// Episode cover doesn't exist
+// API confirms episode exists
+// Shows fallback image with special styling:
+{
+  width: '161px',
+  height: '140px',
+  objectFit: 'contain',
+  backgroundColor: '#071e45'
+}
+```
+
+```javascript Cover Fails, Episode Doesn't Exist
+// Episode cover doesn't exist
+// API confirms episode doesn't exist
+// Card is removed from DOM
+```
+</CodeGroup>
+
+## Sorting
+
+The component supports two sort orders:
+
+<ParamField path="asc" type="string">
+  Ascending order (Episode 1, 2, 3...)
+</ParamField>
+
+<ParamField path="desc" type="string">
+  Descending order (Episode 100, 99, 98...) - **Default**
+</ParamField>
+
+### Sort Selector Example
+
+```html
+<select id="episode-sort">
+  <option value="desc">Más reciente</option>
+  <option value="asc">Más antiguo</option>
+</select>
+```
+
+The component automatically listens to changes on the sort selector and re-renders episodes accordingly.
+
+## Complete Usage Example
+
+<CodeGroup>
+```javascript Full Integration
+import { 
+  initializeEpisodeList, 
+  renderEpisodesList 
+} from './components/EpisodeList.js';
+import { getAnimeBySlug } from './services/animeService.js';
+
+// HTML structure needed:
+// <div id="episode-container"></div>
+// <select id="sort-select">
+//   <option value="desc">Newest First</option>
+//   <option value="asc">Oldest First</option>
+// </select>
+
+async function loadAnimeEpisodes(animeSlug) {
+  // Initialize the component
+  initializeEpisodeList('episode-container', 'sort-select');
+  
+  // Fetch anime data
+  const anime = await getAnimeBySlug(animeSlug);
+  
+  // Render episodes
+  renderEpisodesList(anime.episodes, anime.cover);
+}
+
+loadAnimeEpisodes('one-piece');
+```
+
+```javascript Manual Card Creation
+import { createEpisodeCard } from './components/EpisodeList.js';
+
+// Create individual episode cards
+const episodes = [
+  { number: 1, slug: 'anime-1' },
+  { number: 2, slug: 'anime-2' }
+];
+
+const container = document.querySelector('.episodes');
+const animeCover = 'https://cdn.animeflv.net/cover/12345.jpg';
+
+episodes.forEach(episode => {
+  const card = createEpisodeCard(episode, animeCover);
+  container.appendChild(card);
+});
+```
+</CodeGroup>
+
+## Internal Functions
+
+### getSortedEpisodes()
+
+Returns episodes sorted according to the current sort order.
+
+```javascript
+getSortedEpisodes()
+```
+
+**Returns:** `Array<Object>` - Sorted copy of episode list
+
+---
+
+### renderEpisodes()
+
+Renders episodes in the container, clearing existing content.
+
+```javascript
+renderEpisodes(episodesToRender, animeCoverUrl)
+```
+
+---
+
+### createEpisodeLink()
+
+Creates the episode link with navigation handler.
+
+```javascript
+createEpisodeLink(episode)
+```
+
+**Returns:** `HTMLAnchorElement`
+
+---
+
+### createEpisodeImage()
+
+Creates the episode image with load/error handling.
+
+```javascript
+createEpisodeImage(animeCoverUrl, episode, container, link)
+```
+
+**Returns:** `HTMLImageElement`
+
+---
+
+### applyFallbackImage()
+
+Applies fallback image and styling when the episode cover fails to load.
+
+```javascript
+applyFallbackImage(image, link)
+```
+
+---
+
+### createEpisodeNumber()
+
+Creates the episode number text element.
+
+```javascript
+createEpisodeNumber(number)
+```
+
+**Returns:** `HTMLParagraphElement`
+
+---
+
+### buildEpisodeCoverUrl()
+
+Constructs the episode cover URL from the anime cover URL.
+
+```javascript
+buildEpisodeCoverUrl(animeCoverUrl, episodeNumber)
+```
+
+**Returns:** `string` - Episode cover URL
+
+---
+
+### attachEpisodeSortListener()
+
+Attaches change listener to the sort selector.
+
+```javascript
+attachEpisodeSortListener(animeCoverUrl)
+```
+
+---
+
+### existEpisode()
+
+Asynchronously checks if an episode exists via the API.
+
+```javascript
+existEpisode(number)
+```
+
+**Returns:** `Promise<boolean>` - True if episode exists
+
+## Constants
+
+```javascript
+const EPISODE_COVER_BASE_URL = 'https://cdn.animeflv.net/screenshots';
+```
+
+## Module State
+
+```javascript
+let currentEpisodesList = [];           // Current episode list
+let currentEpisodeSortOrder = 'desc';   // Current sort order
+let episodeListContainer = null;         // Container DOM reference
+let episodeSortSelector = null;          // Sort selector DOM reference
+```
+
+## CSS Classes
+
+- `.main__anime-episode` - Episode card container
+- `.main__anime-episode-cover` - Episode cover image
+- `.main__anime-episode-number` - Episode number text
+
+## Dependencies
+
+```javascript
+import { getEpisodeBySlug } from '../services/animeService.js';
+import { navigateToEpisode } from '../utils/navigation.js';
+import { extractSlugFromURL } from '../utils/urlParams.js';
+```
+
+## Best Practices
+
+<Note>
+  Always call `initializeEpisodeList()` before `renderEpisodesList()` to ensure DOM references are properly cached.
+</Note>
+
+<Note>
+  The component handles episode validation automatically - invalid episodes are removed from the display without user intervention.
+</Note>
+
+<Note>
+  Episode cards use lazy loading behavior - they remain hidden until images load successfully or fallbacks are applied.
+</Note>

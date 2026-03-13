@@ -1,0 +1,498 @@
+---
+title: Adding New Pages
+description: Step-by-step guide to adding new pages to AnimeAho Client
+---
+
+## Page Structure Overview
+
+Each page in AnimeAho Client consists of three main parts:
+
+1. **HTML file** - Page structure and semantic markup
+2. **JavaScript file** - Page logic and initialization
+3. **CSS file** (optional) - Page-specific styles
+
+## Creating a New Page
+
+<Steps>
+  <Step title="Create HTML File">
+    Create a new HTML file in the `source/` directory:
+
+    ```html source/mypage.html
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        
+        <!-- Load CSS in order: global → page-specific → responsive -->
+        <link rel="stylesheet" href="css/pages.css">
+        <link rel="stylesheet" href="css/mypage.css">
+        <link rel="stylesheet" href="css/responsive.css">
+        
+        <link rel="icon" href="assets/icons/favicon.png">
+        <title>My Page - AnimeAho</title>
+    </head>
+    <body>
+        <!-- Header (navigation) -->
+        <header class="header">
+            <div class="header__inner">
+                <a href="index.html">
+                    <img src="assets/images/logo-animeaho.png" alt="AnimeAho" class="header__logo">
+                </a>
+
+                <div class="header__search">
+                    <input class="header__search-input" type="search" placeholder="Buscar..." aria-label="Buscar anime">
+                    <div class="header__search-dropdown"></div>
+                    <a class="header__search-link" aria-label="Buscar">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF">
+                            <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/>
+                        </svg>
+                    </a>
+                </div>
+
+                <nav class="header__nav" aria-label="Navegación principal">
+                    <a href="index.html">INICIO</a>
+                    <a href="browse.html">ANIMES</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main content area -->
+        <main class="main">
+            <div class="main__inner">
+                <h1 class="main__title">My Page Title</h1>
+                <div id="content-container" class="main__content"></div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer__inner">
+                <small>&copy; AnimeAho - Todos los derechos reservados</small>
+            </div>
+        </footer>
+
+        <!-- Load page JavaScript as ES6 module -->
+        <script type="module" src="js/pages/mypage.js"></script>
+    </body>
+    </html>
+    ```
+
+    <Note>
+      Notice the CSS load order:
+      1. `pages.css` - Global styles and CSS variables
+      2. `mypage.css` - Page-specific styles
+      3. `responsive.css` - Media queries for all pages
+    </Note>
+  </Step>
+
+  <Step title="Create JavaScript File">
+    Create the page logic in `js/pages/mypage.js`:
+
+    ```javascript js/pages/mypage.js
+    // Import services
+    import { getAnimeBySlug } from '../services/animeService.js';
+    
+    // Import components
+    import { renderAnimeCard } from '../components/AnimeCard.js';
+    
+    // Import utilities
+    import { addListenerInput } from '../utils/search.js';
+    import { displayErrorMessage } from '../utils/errorHandler.js';
+
+    /**
+     * Initialize the page when DOM is ready
+     */
+    async function initializeMyPage() {
+        try {
+            // Initialize search functionality
+            addListenerInput();
+            
+            // Load page data
+            await loadPageContent();
+            
+        } catch (error) {
+            console.error('Error initializing page:', error);
+            displayErrorMessage('Error al cargar el contenido.');
+        }
+    }
+
+    /**
+     * Load and render page content
+     */
+    async function loadPageContent() {
+        const container = document.getElementById('content-container');
+        
+        if (!container) {
+            console.warn('Content container not found');
+            return;
+        }
+
+        // Fetch data from API
+        const response = await getAnimeBySlug('example-slug');
+        
+        if (!response || !response.data) {
+            container.innerHTML = '<p>No hay contenido disponible.</p>';
+            return;
+        }
+
+        // Render components
+        const card = renderAnimeCard(response.data, null, true);
+        container.appendChild(card);
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', initializeMyPage);
+    ```
+  </Step>
+
+  <Step title="Create CSS File (Optional)">
+    If your page needs custom styles, create `css/mypage.css`:
+
+    ```css css/mypage.css
+    /* MyPage specific styles */
+
+    .main__title {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--color-text);
+        margin-bottom: 2rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .main__content {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+        gap: 20px;
+    }
+
+    /* Use CSS variables from pages.css */
+    .custom-section {
+        background-color: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+    ```
+
+    <Warning>
+      Always use CSS variables defined in `pages.css` for colors, fonts, and spacing to maintain consistency.
+    </Warning>
+  </Step>
+
+  <Step title="Add Responsive Styles">
+    Add responsive breakpoints to `css/responsive.css`:
+
+    ```css css/responsive.css
+    /* Tablet (900px) */
+    @media (max-width: 900px) {
+        .main__content {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+    }
+
+    /* Mobile (640px) */
+    @media (max-width: 640px) {
+        .main__title {
+            font-size: 1.5rem;
+        }
+        
+        .main__content {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Add Navigation Links">
+    Update navigation in all HTML files to include your new page:
+
+    ```html
+    <nav class="header__nav" aria-label="Navegación principal">
+        <a href="index.html">INICIO</a>
+        <a href="browse.html">ANIMES</a>
+        <a href="mypage.html">MI PÁGINA</a>
+    </nav>
+    ```
+  </Step>
+</Steps>
+
+## Real Example: Search Page
+
+Let's examine the existing search page as a complete example:
+
+### HTML Structure
+
+```html source/search.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/search.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <title>Buscar - AnimeAho</title>
+</head>
+<body>
+    <header class="header">
+        <!-- Header content -->
+    </header>
+
+    <main class="main">
+        <div class="main__inner">
+            <h1 id="search-title" class="main__search-title"></h1>
+            <div id="search-animes" class="main__animes-container"></div>
+            <div id="search-pagination" class="main__pagination"></div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <!-- Footer content -->
+    </footer>
+
+    <script type="module" src="js/pages/search.js"></script>
+</body>
+</html>
+```
+
+### JavaScript Logic
+
+```javascript js/pages/search.js
+import { searchAnimeWithText } from '../services/animeService.js';
+import { renderAnimeCard } from '../components/AnimeCard.js';
+import { renderPagination } from '../components/Navbar.js';
+import { addListenerInput } from '../utils/search.js';
+import { displayErrorMessage } from '../utils/errorHandler.js';
+
+async function initializeSearchPage() {
+    try {
+        // Get URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const query = params.get('query') || '';
+        const page = parseInt(params.get('page')) || 1;
+
+        // Initialize search
+        addListenerInput();
+        
+        // Update title
+        document.getElementById('search-title').textContent = 
+            `Resultados para "${query}"`;
+
+        // Load search results
+        await loadSearchResults(query, page);
+        
+    } catch (error) {
+        console.error('Error initializing search:', error);
+        displayErrorMessage('Error al cargar resultados.');
+    }
+}
+
+async function loadSearchResults(query, page) {
+    const container = document.getElementById('search-animes');
+    const paginationContainer = document.getElementById('search-pagination');
+
+    if (!query) {
+        container.innerHTML = '<p>Ingresa un término de búsqueda.</p>';
+        return;
+    }
+
+    const response = await searchAnimeWithText(query, page);
+
+    if (!response.data || response.data.media.length === 0) {
+        container.innerHTML = '<p>No se encontraron resultados.</p>';
+        return;
+    }
+
+    // Render anime cards
+    response.data.media.forEach(anime => {
+        const card = renderAnimeCard(anime, anime.type, true);
+        container.appendChild(card);
+    });
+
+    // Render pagination
+    if (response.data.pagination.totalPages > 1) {
+        renderPagination(
+            response.data.pagination.currentPage,
+            response.data.pagination.totalPages,
+            query,
+            paginationContainer
+        );
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initializeSearchPage);
+```
+
+## Page Initialization Pattern
+
+All pages follow this initialization pattern:
+
+```javascript
+// 1. Import dependencies
+import { service } from '../services/service.js';
+import { component } from '../components/Component.js';
+
+// 2. Define initialization function
+async function initializePage() {
+    try {
+        // 3. Parse URL parameters (if needed)
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+
+        // 4. Initialize common features
+        addListenerInput(); // Search functionality
+
+        // 5. Load page-specific data
+        await loadPageData(id);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        displayErrorMessage('Error al cargar la página.');
+    }
+}
+
+// 6. Define data loading functions
+async function loadPageData(id) {
+    const container = document.getElementById('container');
+    const response = await service(id);
+    
+    if (!response.data) {
+        container.innerHTML = '<p>No hay datos disponibles.</p>';
+        return;
+    }
+    
+    // Render components
+    container.appendChild(component(response.data));
+}
+
+// 7. Attach to DOM ready event
+document.addEventListener('DOMContentLoaded', initializePage);
+```
+
+## Working with URL Parameters
+
+```javascript
+// Read URL parameters
+const params = new URLSearchParams(window.location.search);
+const slug = params.get('slug');
+const page = parseInt(params.get('page')) || 1;
+
+// Navigate with parameters
+function navigateToPage(slug, page) {
+    window.location.href = `mypage.html?slug=${slug}&page=${page}`;
+}
+```
+
+## Error Handling
+
+Implement proper error handling:
+
+```javascript
+import { displayErrorMessage } from '../utils/errorHandler.js';
+
+async function loadData() {
+    try {
+        const response = await getAnimeBySlug('invalid-slug');
+        
+        if (!response.data) {
+            displayErrorMessage('Anime no encontrado.');
+            return;
+        }
+        
+        // Process data
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
+        displayErrorMessage('Error de conexión. Intenta de nuevo.');
+    }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always validate DOM elements">
+    ```javascript
+    const container = document.getElementById('container');
+    if (!container) {
+        console.warn('Container not found');
+        return;
+    }
+    // Safe to use container
+    ```
+  </Accordion>
+
+  <Accordion title="Use async/await for API calls">
+    ```javascript
+    // ✅ Good: Clean async/await
+    async function loadData() {
+        const response = await getAnimeBySlug('slug');
+        render(response.data);
+    }
+
+    // ❌ Bad: Callback hell
+    getAnimeBySlug('slug').then(response => {
+        render(response.data);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Provide user feedback">
+    ```javascript
+    // Show loading state
+    container.innerHTML = '<p>Cargando...</p>';
+    
+    // Load data
+    const response = await getData();
+    
+    // Show content or error
+    if (response.data) {
+        render(response.data);
+    } else {
+        displayErrorMessage('Error al cargar.');
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Your Page
+
+<Steps>
+  <Step title="Test in Browser">
+    Open your page in a browser and verify:
+    - Page loads without errors
+    - Console shows no JavaScript errors
+    - Network tab shows successful API calls
+  </Step>
+
+  <Step title="Test Responsive Design">
+    - Open DevTools (F12)
+    - Toggle device toolbar (Ctrl+Shift+M)
+    - Test on mobile, tablet, and desktop sizes
+  </Step>
+
+  <Step title="Test Navigation">
+    - Click all links to verify they work
+    - Test browser back/forward buttons
+    - Verify URL parameters are handled correctly
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Styling Guide" icon="palette" href="/development/styling">
+    Learn the CSS architecture and design system
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/services/anime-service">
+    Explore available API endpoints
+  </Card>
+</CardGroup>

@@ -1,0 +1,277 @@
+---
+title: "SearchDropdown"
+description: "Search dropdown component that displays anime search results with a 'View More' option"
+---
+
+## Overview
+
+The SearchDropdown component manages the display of search results in a dropdown menu. It shows up to 5 search results with anime covers and titles, and provides a "View More" button when there are additional results.
+
+**File Location:** `source/js/components/SearchDropdown.js`
+
+## Exported Functions
+
+### renderDropdown()
+
+Renders search results in the dropdown menu, showing a maximum of 5 results with an optional "View More" button.
+
+```javascript
+renderDropdown(media)
+```
+
+<ParamField path="media" type="Array<Object>" required>
+  Array of anime objects from search results
+  
+  Each anime object should contain:
+  - `title` (string): Anime title
+  - `cover` (string): URL to cover image
+  - `slug` (string): Anime slug for navigation
+</ParamField>
+
+**Returns:** `void`
+
+**Behavior:**
+- Clears existing dropdown content
+- Renders up to 5 search results using `renderDropdownItem()`
+- Shows "Ver más" button if there are more than 5 results
+- Makes the dropdown visible
+
+#### Example
+
+```javascript
+import { renderDropdown } from './components/SearchDropdown.js';
+
+// Search results from API
+const searchResults = [
+  {
+    title: 'One Piece',
+    cover: 'https://example.com/one-piece.jpg',
+    slug: 'one-piece'
+  },
+  {
+    title: 'Naruto',
+    cover: 'https://example.com/naruto.jpg',
+    slug: 'naruto'
+  },
+  {
+    title: 'Bleach',
+    cover: 'https://example.com/bleach.jpg',
+    slug: 'bleach'
+  }
+  // ... more results
+];
+
+renderDropdown(searchResults);
+```
+
+#### Result Limit Behavior
+
+<CodeGroup>
+```javascript Few Results (≤5)
+// Only 3 results - all shown, no "View More" button
+const results = [
+  { title: 'Anime 1', cover: '...', slug: 'anime-1' },
+  { title: 'Anime 2', cover: '...', slug: 'anime-2' },
+  { title: 'Anime 3', cover: '...', slug: 'anime-3' }
+];
+
+renderDropdown(results);
+// Dropdown shows: 3 items, no button
+```
+
+```javascript Many Results (>5)
+// 10 results - first 5 shown, "View More" button added
+const results = [
+  { title: 'Anime 1', cover: '...', slug: 'anime-1' },
+  { title: 'Anime 2', cover: '...', slug: 'anime-2' },
+  { title: 'Anime 3', cover: '...', slug: 'anime-3' },
+  { title: 'Anime 4', cover: '...', slug: 'anime-4' },
+  { title: 'Anime 5', cover: '...', slug: 'anime-5' },
+  { title: 'Anime 6', cover: '...', slug: 'anime-6' },
+  // ... 4 more items
+];
+
+renderDropdown(results);
+// Dropdown shows: 5 items + "Ver más" button
+// Button navigates to full search results page
+```
+</CodeGroup>
+
+---
+
+### hideDropdown()
+
+Hides the search dropdown from view.
+
+```javascript
+hideDropdown()
+```
+
+**Returns:** `void`
+
+#### Example
+
+```javascript
+import { hideDropdown } from './components/SearchDropdown.js';
+
+// Hide dropdown when clicking outside
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.header__search')) {
+    hideDropdown();
+  }
+});
+```
+
+```javascript
+// Hide dropdown when search input is cleared
+searchInput.addEventListener('input', (event) => {
+  if (event.target.value === '') {
+    hideDropdown();
+  }
+});
+```
+
+## "View More" Button
+
+When there are more than 5 results, a "Ver más" button is automatically added:
+
+```html
+<button class="header__search-more">
+  Ver más
+</button>
+```
+
+**Button Behavior:**
+- Navigates to the full search results page (page 1)
+- Uses `navigateToAnimeSearchList(1)` from navigation utils
+
+## DOM Structure
+
+The component targets the following DOM element:
+
+```html
+<div class="header__search-dropdown">
+  <!-- Search items rendered here -->
+</div>
+```
+
+### Generated Dropdown Structure
+
+```html
+<div class="header__search-dropdown" style="display: block;">
+  <!-- Item 1 -->
+  <div class="header__search-dropdown-item">
+    <a>
+      <img src="..." alt="Anime Title">
+      <span>Anime Title</span>
+    </a>
+  </div>
+  
+  <!-- Items 2-5 -->
+  <!-- ... -->
+  
+  <!-- View More Button (if >5 results) -->
+  <button class="header__search-more">Ver más</button>
+</div>
+```
+
+## Integration Example
+
+<CodeGroup>
+```javascript Search Handler
+import { renderDropdown, hideDropdown } from './components/SearchDropdown.js';
+import { searchAnime } from './services/animeService.js';
+
+const searchInput = document.querySelector('.header__search-input');
+
+let searchTimeout;
+
+searchInput.addEventListener('input', async (event) => {
+  const query = event.target.value.trim();
+  
+  // Clear existing timeout
+  clearTimeout(searchTimeout);
+  
+  // Hide dropdown if query is empty
+  if (query === '') {
+    hideDropdown();
+    return;
+  }
+  
+  // Debounce search
+  searchTimeout = setTimeout(async () => {
+    const results = await searchAnime(query);
+    
+    if (results.length > 0) {
+      renderDropdown(results);
+    } else {
+      hideDropdown();
+    }
+  }, 300);
+});
+```
+
+```javascript Click Outside to Close
+import { hideDropdown } from './components/SearchDropdown.js';
+
+document.addEventListener('click', (event) => {
+  const searchContainer = document.querySelector('.header__search');
+  
+  if (!searchContainer.contains(event.target)) {
+    hideDropdown();
+  }
+});
+```
+
+```javascript Escape Key to Close
+import { hideDropdown } from './components/SearchDropdown.js';
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    hideDropdown();
+  }
+});
+```
+</CodeGroup>
+
+## CSS Classes
+
+- `.header__search-dropdown` - Main dropdown container
+- `.header__search-dropdown-item` - Individual search result item (from SearchDropdownItem component)
+- `.header__search-more` - "View More" button
+
+## Dependencies
+
+```javascript
+import { renderDropdownItem } from "../components/SearchDropdownItem.js";
+import { navigateToAnimeSearchList } from "../utils/navigation.js";
+```
+
+### SearchDropdownItem Component
+
+The `renderDropdownItem()` function creates individual dropdown items with:
+- Anime cover image
+- Anime title
+- Click handler for navigation
+
+The SearchDropdownItem component creates individual result items within the dropdown.
+
+## Best Practices
+
+<Note>
+  **Debounce Search Input:** Use a debounce delay (300ms recommended) to avoid excessive API calls while the user is typing.
+</Note>
+
+<Note>
+  **Handle Empty States:** Call `hideDropdown()` when the search query is empty or when no results are found.
+</Note>
+
+<Note>
+  **Accessibility:** Ensure keyboard navigation works by handling Enter, Escape, and Arrow keys appropriately.
+</Note>
+
+## Performance Considerations
+
+- The dropdown clears all content with `innerHTML = ''` before rendering new results
+- Uses `Math.min(5, media.length)` to limit iterations
+- Individual items are created via `renderDropdownItem()` which uses event delegation efficiently

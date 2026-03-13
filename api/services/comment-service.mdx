@@ -1,0 +1,340 @@
+---
+title: 'Comment Service'
+description: 'Service for managing episode comments and discussions'
+---
+
+The Comment Service enables users to create, read, update, and delete comments on anime episodes.
+
+## Import
+
+```javascript
+import {
+  getComments,
+  addComment,
+  updateComment,
+  deleteComment
+} from './services/commentService.js';
+```
+
+## API Endpoints
+
+The Comment Service interacts with the following backend endpoints:
+
+- `GET /api/comments/:animeId/:episodeId` - Get episode comments
+- `POST /api/comments` - Add a new comment
+- `PUT /api/comments/:id` - Update a comment
+- `DELETE /api/comments/:id` - Delete a comment
+
+## Functions
+
+### getComments
+
+Retrieves all comments for a specific anime episode.
+
+```javascript
+const result = await getComments('one-piece', 'episode-1120');
+
+if (!result.error) {
+  console.log(`Found ${result.data.length} comments`);
+  result.data.forEach(comment => {
+    console.log(`${comment.username}: ${comment.text}`);
+  });
+}
+```
+
+<ParamField path="animeId" type="string" required>
+  The anime identifier or slug
+</ParamField>
+
+<ParamField path="episodeId" type="string" required>
+  The episode identifier or slug
+</ParamField>
+
+**Returns:** `Promise<CommentsResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Comment[]">
+  Array of comment objects
+  <Expandable title="Comment properties">
+    <ResponseField name="id" type="string">
+      Comment ID
+    </ResponseField>
+    <ResponseField name="userId" type="string">
+      ID of the user who posted the comment
+    </ResponseField>
+    <ResponseField name="username" type="string">
+      Username of the commenter
+    </ResponseField>
+    <ResponseField name="avatar" type="string">
+      User's avatar URL
+    </ResponseField>
+    <ResponseField name="text" type="string">
+      Comment text content
+    </ResponseField>
+    <ResponseField name="animeId" type="string">
+      Associated anime ID
+    </ResponseField>
+    <ResponseField name="episodeId" type="string">
+      Associated episode ID
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      Timestamp when comment was created
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      Timestamp when comment was last updated
+    </ResponseField>
+    <ResponseField name="likes" type="number">
+      Number of likes on the comment
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### addComment
+
+Posts a new comment on an episode.
+
+```javascript
+const result = await addComment({
+  animeId: 'one-piece',
+  episodeId: 'episode-1120',
+  text: 'Amazing episode! The animation was incredible!'
+});
+
+if (!result.error) {
+  console.log('Comment posted successfully!');
+  console.log('Comment ID:', result.data.id);
+}
+```
+
+<ParamField path="commentData" type="object" required>
+  Comment information
+  <Expandable title="Comment data object">
+    <ParamField path="animeId" type="string" required>
+      The anime identifier
+    </ParamField>
+    <ParamField path="episodeId" type="string" required>
+      The episode identifier
+    </ParamField>
+    <ParamField path="text" type="string" required>
+      Comment text content (max 1000 characters)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<AddCommentResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the comment was posted successfully
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Response data">
+    <ResponseField name="id" type="string">
+      ID of the newly created comment
+    </ResponseField>
+    <ResponseField name="comment" type="Comment">
+      The complete comment object
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Confirmation message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### updateComment
+
+Updates an existing comment's text.
+
+```javascript
+const commentId = 'comment_12345';
+const result = await updateComment(commentId, {
+  text: 'Updated: This episode was even better on rewatch!'
+});
+
+if (!result.error) {
+  console.log('Comment updated successfully');
+}
+```
+
+<ParamField path="commentId" type="string" required>
+  The ID of the comment to update
+</ParamField>
+
+<ParamField path="updates" type="object" required>
+  Updated comment data
+  <Expandable title="Update object">
+    <ParamField path="text" type="string" required>
+      New comment text content
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<UpdateCommentResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the comment was updated successfully
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Response data">
+    <ResponseField name="comment" type="Comment">
+      The updated comment object
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Confirmation message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### deleteComment
+
+Deletes a comment permanently.
+
+```javascript
+const commentId = 'comment_12345';
+const result = await deleteComment(commentId);
+
+if (!result.error) {
+  console.log('Comment deleted successfully');
+}
+```
+
+<ParamField path="commentId" type="string" required>
+  The ID of the comment to delete
+</ParamField>
+
+**Returns:** `Promise<DeleteCommentResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the comment was deleted successfully
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message
+</ResponseField>
+
+---
+
+## Usage Example
+
+Here's a complete example of a comment section implementation:
+
+```javascript
+import { getComments, addComment, updateComment, deleteComment } from './services/commentService.js';
+
+class CommentSection {
+  constructor(animeId, episodeId) {
+    this.animeId = animeId;
+    this.episodeId = episodeId;
+    this.comments = [];
+  }
+
+  async load() {
+    const result = await getComments(this.animeId, this.episodeId);
+    if (!result.error) {
+      this.comments = result.data;
+      this.render();
+    }
+  }
+
+  async post(text) {
+    const result = await addComment({
+      animeId: this.animeId,
+      episodeId: this.episodeId,
+      text: text
+    });
+    
+    if (!result.error) {
+      this.comments.unshift(result.data.comment);
+      this.render();
+    }
+  }
+
+  async edit(commentId, newText) {
+    const result = await updateComment(commentId, { text: newText });
+    if (!result.error) {
+      const index = this.comments.findIndex(c => c.id === commentId);
+      if (index !== -1) {
+        this.comments[index] = result.data.comment;
+        this.render();
+      }
+    }
+  }
+
+  async remove(commentId) {
+    const result = await deleteComment(commentId);
+    if (!result.error) {
+      this.comments = this.comments.filter(c => c.id !== commentId);
+      this.render();
+    }
+  }
+
+  render() {
+    const container = document.getElementById('comments');
+    container.innerHTML = this.comments.map(comment => `
+      <div class="comment" data-id="${comment.id}">
+        <img src="${comment.avatar}" alt="${comment.username}">
+        <div>
+          <strong>${comment.username}</strong>
+          <p>${comment.text}</p>
+          <small>${new Date(comment.createdAt).toLocaleString()}</small>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+```
+
+## Error Handling
+
+```javascript
+const result = await addComment(commentData);
+
+if (result.error) {
+  switch (result.statusCode) {
+    case 401:
+      console.error('Please log in to comment');
+      break;
+    case 400:
+      console.error('Invalid comment data');
+      break;
+    case 403:
+      console.error('You can only edit/delete your own comments');
+      break;
+    case 429:
+      console.error('Too many comments. Please wait before posting again.');
+      break;
+    default:
+      console.error('Error:', result.message);
+  }
+}
+```
+
+<ResponseField name="error" type="boolean">
+  True if an error occurred
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error message description
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code
+</ResponseField>
+
+<Warning>
+  Users can only update or delete their own comments. The backend enforces this with user ID verification.
+</Warning>
+
+<Note>
+  All comment operations except `getComments` require the user to be authenticated.
+</Note>

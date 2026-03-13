@@ -1,0 +1,385 @@
+---
+title: Creating Components
+description: Build reusable UI components for AnimeAho Client
+---
+
+## Component Architecture
+
+AnimeAho Client uses a functional component pattern with vanilla JavaScript. Components are pure functions that:
+
+- Accept data as parameters
+- Return DOM elements
+- Have no side effects (unless explicitly needed)
+- Are reusable across pages
+
+## Component Pattern
+
+All components follow this general structure:
+
+```javascript
+/**
+ * Component documentation
+ * @param {Object} data - Component data
+ * @param {Object} options - Optional configuration
+ * @returns {HTMLElement} DOM element ready to insert
+ */
+export function renderComponent(data, options = {}) {
+    // Create element
+    const element = document.createElement('div');
+    element.className = 'component-class';
+    
+    // Set attributes
+    element.setAttribute('data-id', data.id);
+    
+    // Add content
+    element.textContent = data.title;
+    
+    // Attach event listeners if needed
+    element.addEventListener('click', handleClick);
+    
+    return element;
+}
+```
+
+## Real Component Examples
+
+### AnimeCard Component
+
+The `AnimeCard` component is one of the most used components. It renders anime/episode cards with images, badges, and navigation.
+
+```javascript js/components/AnimeCard.js
+import { navigateToAnimeDetail, navigateToEpisode } from '../utils/navigation.js';
+
+/**
+ * Creates an anime card with cover, title and optional badge.
+ * 
+ * @param {Object} anime - Anime data { title, cover, slug }
+ * @param {string|null} badgeText - Badge text (e.g. "Episode 3"). null = no badge
+ * @param {boolean} isDetailView - true = navigate to detail | false = navigate to episode
+ * @returns {HTMLElement} Card ready to insert in the DOM
+ */
+export function renderAnimeCard(anime, badgeText = null, isDetailView = true) {
+    const article = document.createElement('article');
+    article.className = 'anime-card';
+    article.setAttribute('data-anime-slug', anime.slug);
+
+    const imageLink = document.createElement('a');
+    imageLink.className = 'anime-card__a';
+    imageLink.href = '#';
+    imageLink.setAttribute('title', `Ver ${isDetailView ? 'detalles de' : 'episodios de'} ${anime.title}`);
+
+    const image = document.createElement('img');
+    image.className = 'anime-card__image';
+    image.src = anime.cover;
+    image.alt = `Portada de ${anime.title}`;
+    image.loading = 'lazy';
+
+    imageLink.appendChild(image);
+
+    if (badgeText) {
+        const badge = document.createElement('div');
+        badge.className = 'anime-card__badge';
+        badge.textContent = badgeText;
+        imageLink.appendChild(badge);
+    }
+
+    const titleElement = document.createElement('p');
+    titleElement.className = 'anime-card__name';
+    titleElement.textContent = anime.title;
+    titleElement.setAttribute('title', anime.title);
+
+    article.appendChild(imageLink);
+    article.appendChild(titleElement);
+
+    imageLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleCardNavigation(anime.slug, isDetailView);
+    });
+
+    return article;
+}
+
+function handleCardNavigation(slug, isDetailView) {
+    if (isDetailView) {
+        navigateToAnimeDetail(slug);
+    } else {
+        navigateToEpisode(slug);
+    }
+}
+```
+
+<Note>
+  Notice how the component:
+  - Returns a complete DOM element
+  - Handles its own event listeners
+  - Uses utility functions for navigation
+  - Supports optional features (badge)
+</Note>
+
+### Usage Example
+
+```javascript js/pages/index.js
+import { renderAnimeCard } from '../components/AnimeCard.js';
+
+async function loadLatestEpisodes() {
+    const response = await getLatestEpisodes();
+    const section = document.getElementById('latest-episodes');
+
+    response.data.forEach(episode => {
+        const episodeCard = renderAnimeCard(
+            episode,
+            `Episodio: ${episode.number}`,
+            false
+        );
+        episodeCard.classList.add('anime-card--episode');
+        section.appendChild(episodeCard);
+    });
+}
+```
+
+### Navigation Component
+
+The navigation component demonstrates how to handle dynamic button rendering:
+
+```javascript js/components/Navbar.js
+import { navigateToAnimeDetail, navigateToEpisode } from '../utils/navigation.js';
+
+const NAVIGATION_ICONS = {
+    prev: `<svg>...</svg>`,
+    next: `<svg>...</svg>`,
+    home: `<svg>...</svg>`
+};
+
+/**
+ * Renders episode navigation buttons.
+ * @param {string|null} prevSlug - Previous episode slug
+ * @param {string|null} nextSlug - Next episode slug
+ * @param {Object} dom - DOM cache
+ */
+export function renderEpisodeNavigation(prevSlug, nextSlug, dom) {
+    dom.navigationButtons.innerHTML = '';
+
+    if (prevSlug) {
+        dom.navigationButtons.appendChild(
+            createEpisodeBtn('Episodio anterior', prevSlug, 'prev')
+        );
+    }
+    if (nextSlug) {
+        dom.navigationButtons.appendChild(
+            createEpisodeBtn('Episodio siguiente', nextSlug, 'next')
+        );
+    }
+}
+
+function createEpisodeBtn(label, episodeSlug, direction) {
+    const button = document.createElement('button');
+    button.className = `main__nav-btn main__nav-btn--${direction}`;
+    button.setAttribute('aria-label', `Ir a ${label.toLowerCase()}`);
+    button.innerHTML = direction === 'prev'
+        ? `${NAVIGATION_ICONS.prev} ${label}`
+        : `${label} ${NAVIGATION_ICONS.next}`;
+
+    button.addEventListener('click', () => navigateToEpisode(episodeSlug));
+    return button;
+}
+```
+
+## Creating a New Component
+
+<Steps>
+  <Step title="Create Component File">
+    Create a new file in `js/components/` following the naming convention:
+
+    ```bash
+    touch js/components/MyComponent.js
+    ```
+  </Step>
+
+  <Step title="Define Component Structure">
+    ```javascript js/components/MyComponent.js
+    /**
+     * MyComponent - Brief description of what it does
+     * @param {Object} data - Component data
+     * @returns {HTMLElement}
+     */
+    export function renderMyComponent(data) {
+        const container = document.createElement('div');
+        container.className = 'my-component';
+        
+        // Build component
+        const title = document.createElement('h3');
+        title.textContent = data.title;
+        container.appendChild(title);
+        
+        return container;
+    }
+    ```
+  </Step>
+
+  <Step title="Add Styles">
+    Add corresponding styles to the appropriate CSS file:
+
+    ```css css/components.css
+    .my-component {
+        background-color: var(--color-bg-card);
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .my-component h3 {
+        color: var(--color-text);
+        font-size: 1.2rem;
+    }
+    ```
+  </Step>
+
+  <Step title="Import and Use">
+    ```javascript js/pages/index.js
+    import { renderMyComponent } from '../components/MyComponent.js';
+
+    const container = document.getElementById('my-container');
+    const component = renderMyComponent({ title: 'Hello World' });
+    container.appendChild(component);
+    ```
+  </Step>
+</Steps>
+
+## Component Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Components Pure">
+    Components should be predictable:
+    ```javascript
+    // ✅ Good: Pure function
+    export function renderCard(data) {
+        const element = document.createElement('div');
+        element.textContent = data.title;
+        return element;
+    }
+
+    // ❌ Bad: Side effects
+    export function renderCard(data) {
+        const element = document.createElement('div');
+        document.body.appendChild(element); // Side effect!
+        return element;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use Semantic HTML">
+    ```javascript
+    // ✅ Good: Semantic elements
+    const article = document.createElement('article');
+    const heading = document.createElement('h2');
+    const link = document.createElement('a');
+
+    // ❌ Bad: Generic divs for everything
+    const div1 = document.createElement('div');
+    const div2 = document.createElement('div');
+    const div3 = document.createElement('div');
+    ```
+  </Accordion>
+
+  <Accordion title="Add Accessibility Attributes">
+    ```javascript
+    const button = document.createElement('button');
+    button.setAttribute('aria-label', 'Play video');
+    button.setAttribute('role', 'button');
+    
+    const image = document.createElement('img');
+    image.alt = 'Anime cover image';
+    image.loading = 'lazy';
+    ```
+  </Accordion>
+
+  <Accordion title="Use Document Fragments for Batch Updates">
+    ```javascript
+    // ✅ Good: Single DOM update
+    export function renderAnimeCards(animes, container) {
+        const fragment = document.createDocumentFragment();
+        animes.forEach(anime => {
+            fragment.appendChild(renderAnimeCard(anime));
+        });
+        container.appendChild(fragment);
+    }
+
+    // ❌ Bad: Multiple DOM updates
+    animes.forEach(anime => {
+        container.appendChild(renderAnimeCard(anime));
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Component Composition
+
+Components can be composed together:
+
+```javascript
+import { renderAnimeCard } from './AnimeCard.js';
+import { renderPagination } from './Navbar.js';
+
+export function renderAnimeGrid(animes, currentPage, totalPages) {
+    const container = document.createElement('div');
+    container.className = 'anime-grid';
+
+    // Grid of cards
+    const grid = document.createElement('div');
+    grid.className = 'anime-grid__cards';
+    animes.forEach(anime => {
+        grid.appendChild(renderAnimeCard(anime, anime.type, true));
+    });
+
+    // Pagination
+    const pagination = document.createElement('div');
+    pagination.className = 'anime-grid__pagination';
+    renderPagination(currentPage, totalPages, '', pagination);
+
+    container.appendChild(grid);
+    container.appendChild(pagination);
+
+    return container;
+}
+```
+
+## Testing Components
+
+Test your components in isolation:
+
+```javascript
+// Create a test container
+const testContainer = document.createElement('div');
+document.body.appendChild(testContainer);
+
+// Test component
+const testData = {
+    title: 'Test Anime',
+    cover: 'https://example.com/cover.jpg',
+    slug: 'test-anime'
+};
+
+const card = renderAnimeCard(testData, 'Episode 1', false);
+testContainer.appendChild(card);
+
+// Verify
+console.log('Card classes:', card.className);
+console.log('Has badge:', card.querySelector('.anime-card__badge') !== null);
+```
+
+<Warning>
+  Always clean up test elements after testing to avoid memory leaks:
+  ```javascript
+  testContainer.remove();
+  ```
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Add New Pages" icon="file-plus" href="/development/adding-pages">
+    Learn how to create complete pages
+  </Card>
+  <Card title="Styling Guide" icon="palette" href="/development/styling">
+    Style your components properly
+  </Card>
+</CardGroup>

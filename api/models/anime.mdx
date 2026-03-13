@@ -1,0 +1,372 @@
+---
+title: 'Anime Models'
+description: 'Core anime-related model classes for anime details, episodes, and related content'
+---
+
+## AnimeDetail
+
+Represents the complete details of an anime, including metadata, episodes, and related content.
+
+### Properties
+
+<ResponseField name="alternativeTitles" type="string[]">
+  Array of alternative titles for the anime
+</ResponseField>
+
+<ResponseField name="cover" type="string">
+  URL to the anime's cover image
+</ResponseField>
+
+<ResponseField name="episode" type="AnimeEpisodeItem[]">
+  Array of episodes available for this anime
+</ResponseField>
+
+<ResponseField name="genres" type="string[]">
+  Array of genres associated with the anime
+</ResponseField>
+
+<ResponseField name="rating" type="string">
+  Age rating or content rating of the anime
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status of the anime (e.g., "Airing", "Completed")
+</ResponseField>
+
+<ResponseField name="synopsis" type="string">
+  Plot summary or description of the anime
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Primary title of the anime
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Type of anime (e.g., "TV", "Movie", "OVA")
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  URL to the anime's page
+</ResponseField>
+
+<ResponseField name="nextAiringEpisode" type="object | null">
+  Information about the next scheduled episode, if available
+</ResponseField>
+
+<ResponseField name="related" type="RelatedAnime[]">
+  Array of related anime (sequels, prequels, side stories, etc.)
+</ResponseField>
+
+### Example
+
+```javascript
+const client = new AnimeAhoClient();
+const response = await client.getAnimeBySlug('one-piece');
+const anime = response.data; // AnimeDetail instance
+
+console.log(anime.title); // "One Piece"
+console.log(anime.genres); // ["Action", "Adventure", "Fantasy"]
+console.log(anime.episode.length); // Number of episodes
+console.log(anime.related); // Related anime array
+```
+
+---
+
+## AnimeEpisodeItem
+
+Represents an individual episode within an anime's episode list.
+
+### Properties
+
+<ResponseField name="number" type="number">
+  Episode number
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-friendly slug for the episode
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Direct URL to the episode page
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getAnimeBySlug('one-piece');
+const episodes = response.data.episode;
+
+episodes.forEach(episode => {
+  console.log(`Episode ${episode.number}: ${episode.url}`);
+});
+```
+
+---
+
+## RelatedAnime
+
+Represents an anime that is related to the current anime (sequel, prequel, side story, etc.).
+
+### Properties
+
+<ResponseField name="slug" type="string">
+  URL-friendly slug for the related anime
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Title of the related anime
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  URL to the related anime's page
+</ResponseField>
+
+<ResponseField name="relation" type="string">
+  Type of relation (e.g., "Sequel", "Prequel", "Side Story", "Alternative Version")
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getAnimeBySlug('naruto-shippuden');
+const related = response.data.related;
+
+related.forEach(anime => {
+  console.log(`${anime.relation}: ${anime.title}`);
+});
+// Output: "Prequel: Naruto"
+```
+
+---
+
+## EpisodeDetail
+
+Represents complete details of a single episode, including available streaming servers.
+
+### Properties
+
+<ResponseField name="title" type="string">
+  Title of the episode
+</ResponseField>
+
+<ResponseField name="number" type="number">
+  Episode number
+</ResponseField>
+
+<ResponseField name="servers" type="VideoServer[]">
+  Array of available video servers for this episode
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getEpisodeBySlug('one-piece-1');
+const episode = response.data;
+
+console.log(episode.title); // "Romance Dawn"
+console.log(episode.number); // 1
+console.log(episode.servers.length); // Number of available servers
+```
+
+---
+
+## VideoServer
+
+Represents a video hosting server for an episode.
+
+### Properties
+
+<ResponseField name="name" type="string">
+  Name of the video server (e.g., "StreamSB", "Okru")
+</ResponseField>
+
+<ResponseField name="download" type="string">
+  Download URL for the video
+</ResponseField>
+
+<ResponseField name="embed" type="string">
+  Embed URL for streaming the video
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getEpisodeBySlug('one-piece-1');
+const servers = response.data.servers;
+
+servers.forEach(server => {
+  console.log(`Server: ${server.name}`);
+  console.log(`Embed: ${server.embed}`);
+  console.log(`Download: ${server.download}`);
+});
+```
+
+---
+
+## AiringAnimeItem
+
+Represents an anime currently airing in the anime list.
+
+### Properties
+
+<ResponseField name="slug" type="string">
+  URL-friendly slug for the anime
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Title of the anime
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Type of anime (e.g., "TV", "Movie")
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  URL to the anime's page
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getAiringAnimes();
+const airingAnimes = response.data;
+
+airingAnimes.forEach(anime => {
+  console.log(`${anime.title} (${anime.type})`);
+});
+```
+
+---
+
+## LatestEpisodeItem
+
+Represents a recently released episode in the latest episodes list.
+
+### Properties
+
+<ResponseField name="cover" type="string">
+  URL to the episode's cover image
+</ResponseField>
+
+<ResponseField name="number" type="number">
+  Episode number
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-friendly slug for the episode
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Title of the anime
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  URL to the episode page
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.getLatestEpisodes();
+const latestEpisodes = response.data;
+
+latestEpisodes.forEach(episode => {
+  console.log(`${episode.title} - Episode ${episode.number}`);
+  console.log(`Cover: ${episode.cover}`);
+});
+```
+
+---
+
+## SearchAnimeDetail
+
+Represents paginated search results for anime queries.
+
+### Properties
+
+<ResponseField name="currentPage" type="number">
+  Current page number in the search results
+</ResponseField>
+
+<ResponseField name="foundPages" type="number">
+  Total number of pages found
+</ResponseField>
+
+<ResponseField name="hasNextPage" type="boolean">
+  Whether there is a next page available
+</ResponseField>
+
+<ResponseField name="media" type="MediaAnime[]">
+  Array of anime search results
+</ResponseField>
+
+<ResponseField name="nextPage" type="number | null">
+  Next page number, or null if no next page exists
+</ResponseField>
+
+<ResponseField name="previousPage" type="number | null">
+  Previous page number, or null if no previous page exists
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.searchAnime('naruto', 1);
+const searchData = response.data;
+
+console.log(`Page ${searchData.currentPage} of ${searchData.foundPages}`);
+console.log(`Found ${searchData.media.length} results`);
+
+if (searchData.hasNextPage) {
+  console.log(`Next page: ${searchData.nextPage}`);
+}
+```
+
+---
+
+## MediaAnime
+
+Represents an individual anime in search results.
+
+### Properties
+
+<ResponseField name="cover" type="string">
+  URL to the anime's cover image
+</ResponseField>
+
+<ResponseField name="rating" type="string">
+  Age rating or content rating
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-friendly slug for the anime
+</ResponseField>
+
+<ResponseField name="synopsis" type="string">
+  Brief synopsis of the anime
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Title of the anime
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Type of anime (e.g., "TV", "Movie")
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  URL to the anime's page
+</ResponseField>
+
+### Example
+
+```javascript
+const response = await client.searchAnime('naruto', 1);
+const results = response.data.media;
+
+results.forEach(anime => {
+  console.log(`${anime.title} (${anime.type})`);
+  console.log(`Rating: ${anime.rating}`);
+  console.log(`Synopsis: ${anime.synopsis}`);
+});
+```

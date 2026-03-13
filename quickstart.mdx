@@ -1,80 +1,181 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with AnimeAho Client in minutes
 ---
 
-## Get started in three steps
+This guide will help you set up and run the AnimeAho Client application locally. You'll have a working anime streaming platform in just a few minutes.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you begin, ensure you have:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+- A modern web browser (Chrome, Firefox, Safari, or Edge)
+- A local web server (Live Server, Python's HTTP server, or Node.js http-server)
+- Git installed on your machine
 
-### Step 2: Deploy your changes
+## Setup Instructions
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Steps>
+  <Step title="Clone the repository">
+    Clone the AnimeAho Client repository to your local machine:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash
+    git clone https://github.com/yourusername/animeaho-client.git
+    cd animeaho-client
+    ```
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Open the project">
+    The project is a vanilla JavaScript application with no build step required. Simply navigate to the project directory:
 
-### Step 3: Go live
+    ```bash
+    cd animeaho-client
+    ```
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Start a local server">
+    Since the project uses ES6 modules, you need to serve it through a local web server. Choose one of the following options:
 
-## Next steps
+    <CodeGroup>
+      ```bash VS Code Live Server
+      # Right-click on index.html and select "Open with Live Server"
+      # Or install the Live Server extension and click "Go Live"
+      ```
 
-Now that you have your docs running, explore these key features:
+      ```bash Python
+      python -m http.server 8000
+      # Then visit http://localhost:8000
+      ```
+
+      ```bash Node.js
+      npx http-server -p 8000
+      # Then visit http://localhost:8000
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Access the application">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:8000
+    ```
+
+    You should see the AnimeAho home page with:
+    - Latest episodes in the main content area
+    - Currently airing anime in the sidebar
+    - A search bar in the header
+  </Step>
+</Steps>
+
+## Verify the Installation
+
+Once the application is running, you should see:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Home Page" icon="house">
+    Displays latest episodes and newly added anime with cover images and titles.
+  </Card>
+  <Card title="Search Functionality" icon="magnifying-glass">
+    The search bar in the header allows you to search for anime by name.
+  </Card>
+  <Card title="Navigation" icon="bars">
+    Access different sections like Browse, Favorites through the header navigation.
+  </Card>
+  <Card title="Anime Details" icon="circle-info">
+    Click any anime card to view full details, episodes, and related content.
+  </Card>
 </CardGroup>
 
+## Quick Example: Loading Anime Data
+
+The home page automatically loads anime content using the built-in services. Here's how the main page initializes:
+
+```javascript js/pages/index.js
+import {
+    getAiringAnimes,
+    getLatestEpisodes,
+    searchAnimeFilter,
+} from '../services/animeService.js';
+import { renderAnimeCard } from '../components/AnimeCard.js';
+
+async function initializeHomePage() {
+    try {
+        await loadAiringAnimes();
+        await loadLatestEpisodes();
+        await loadLatestAnimes();
+        addListenerInput();
+    } catch (error) {
+        console.error('Error al inicializar la página principal:', error);
+        displayErrorMessage('Error al cargar el contenido.');
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeHomePage);
+```
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  The application fetches anime data from the AnimeFlv public API at `https://animeflv.ahmedrangel.com`. No API key is required for basic functionality.
 </Note>
+
+## Backend Integration (Optional)
+
+For advanced features like user authentication, favorites, and comments, you'll need to connect to the AnimeAho backend:
+
+1. The backend API URL is configured in `js/config/api.config.js`:
+
+```javascript js/config/api.config.js
+// API backend de AnimeAho (proxy y autenticación)
+export const BACKEND_API_BASE_URL = 'https://animeaho-backend.vercel.app/api';
+
+export const BACKEND_ENDPOINTS = {
+    // Autenticación
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    LOGOUT: '/auth/logout',
+    
+    // Favoritos
+    GET_FAVORITES: '/favorites',
+    ADD_FAVORITE: '/favorites',
+    
+    // Comentarios
+    GET_COMMENTS: (animeId, episodeId) => `/comments/${animeId}/${episodeId}`,
+    ADD_COMMENT: '/comments',
+};
+```
+
+2. Update the `BACKEND_API_BASE_URL` if you're running your own backend instance.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="CORS errors in the browser console">
+    Make sure you're serving the application through a web server, not opening the HTML file directly. ES6 modules require a proper HTTP server.
+  </Accordion>
+
+  <Accordion title="Anime images not loading">
+    Check your internet connection. The application fetches images from external CDNs. Some images may be blocked by your network or browser extensions.
+  </Accordion>
+
+  <Accordion title="API requests failing">
+    Verify that the API endpoints in `js/config/api.config.js` are accessible. The public API may occasionally be unavailable.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/project-structure">
+    Learn about the folder organization and file structure
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="/architecture/components">
+    Explore the available UI components
+  </Card>
+  <Card title="Services" icon="server" href="/api/services/anime-service">
+    Understand the API service layer
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    Learn about the application architecture
+  </Card>
+</CardGroup>

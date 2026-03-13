@@ -1,0 +1,149 @@
+---
+title: 'Navigation Utilities'
+description: 'Client-side navigation helpers for routing between AnimeAho pages'
+---
+
+## Overview
+
+The navigation utilities provide functions for navigating between different pages in the AnimeAho client application. These utilities handle URL construction and page transitions.
+
+## Functions
+
+### navigateToEpisode
+
+Navigates to the episode watch page with the specified episode slug.
+
+```javascript navigation.js:6-8
+export function navigateToEpisode(episodeSlug) {
+    window.location.href = `./watch.html?slug=${episodeSlug}`;
+}
+```
+
+<ParamField path="episodeSlug" type="string" required>
+  The slug identifier for the episode (e.g., "one-piece-1045")
+</ParamField>
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { navigateToEpisode } from './utils/navigation.js';
+
+// Navigate to a specific episode
+navigateToEpisode('one-piece-1045');
+// Redirects to: ./watch.html?slug=one-piece-1045
+```
+
+---
+
+### navigateToAnimeDetail
+
+Navigates to the anime detail page for the specified anime.
+
+```javascript navigation.js:15-17
+export function navigateToAnimeDetail(slug) {
+    window.location.href = `./anime.html?slug=${slug}`;
+}
+```
+
+<ParamField path="slug" type="string" required>
+  The slug identifier for the anime (e.g., "one-piece")
+</ParamField>
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { navigateToAnimeDetail } from './utils/navigation.js';
+
+// Navigate to anime detail page
+navigateToAnimeDetail('one-piece');
+// Redirects to: ./anime.html?slug=one-piece
+```
+
+---
+
+### navigateToAnimeSearchList
+
+Navigates to the search results page with pagination and query parameters.
+
+```javascript navigation.js:24-31
+export function navigateToAnimeSearchList(page, query) {
+    if (query) {
+        window.location.href = `./search.html?query=${query}&page=${page}`;
+    } else {
+        const input = document.querySelector('.header__search-input');
+        window.location.href = `./search.html?query=${input.value}&page=${page}`;
+    }
+}
+```
+
+<ParamField path="page" type="number" required>
+  The page number for pagination (1-based index)
+</ParamField>
+
+<ParamField path="query" type="string" optional>
+  The search query string. If not provided, reads from the `.header__search-input` element
+</ParamField>
+
+**Returns:** `void`
+
+#### Usage Example
+
+```javascript
+import { navigateToAnimeSearchList } from './utils/navigation.js';
+
+// Navigate with explicit query
+navigateToAnimeSearchList(1, 'naruto');
+// Redirects to: ./search.html?query=naruto&page=1
+
+// Navigate using current search input value
+navigateToAnimeSearchList(2);
+// Reads query from .header__search-input and redirects to page 2
+```
+
+<Note>
+  When the `query` parameter is not provided, this function falls back to reading the value from the DOM element with class `.header__search-input`.
+</Note>
+
+## Integration Example
+
+```javascript
+import { 
+  navigateToEpisode, 
+  navigateToAnimeDetail, 
+  navigateToAnimeSearchList 
+} from './utils/navigation.js';
+
+// Episode card click handler
+document.querySelectorAll('.episode-card').forEach(card => {
+  card.addEventListener('click', (e) => {
+    const slug = e.currentTarget.dataset.slug;
+    navigateToEpisode(slug);
+  });
+});
+
+// Anime thumbnail click handler
+document.querySelectorAll('.anime-thumbnail').forEach(thumb => {
+  thumb.addEventListener('click', (e) => {
+    const slug = e.currentTarget.dataset.animeSlug;
+    navigateToAnimeDetail(slug);
+  });
+});
+
+// Pagination handler
+document.querySelectorAll('.pagination-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const page = parseInt(e.currentTarget.dataset.page);
+    const query = new URLSearchParams(window.location.search).get('query');
+    navigateToAnimeSearchList(page, query);
+  });
+});
+```
+
+## See Also
+
+- [URL Parameters](/api/utils/url-params) - For extracting URL parameters
+- [Validator](/api/utils/validator) - For validating episode existence before navigation

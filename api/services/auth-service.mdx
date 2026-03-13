@@ -1,0 +1,246 @@
+---
+title: 'Auth Service'
+description: 'Authentication and authorization service for user management'
+---
+
+The Auth Service handles user authentication operations including login, registration, logout, and token verification.
+
+## Import
+
+```javascript
+import {
+  login,
+  register,
+  logout,
+  verifyToken
+} from './services/authService.js';
+```
+
+## API Endpoints
+
+The Auth Service interacts with the following backend endpoints:
+
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - New user registration
+- `POST /api/auth/logout` - User logout
+- `POST /api/auth/verify` - Token verification
+
+## Functions
+
+### login
+
+Authenticates a user with email and password.
+
+```javascript
+const result = await login({
+  email: 'user@example.com',
+  password: 'securePassword123'
+});
+
+if (!result.error) {
+  console.log('Login successful');
+  console.log('Token:', result.data.token);
+  console.log('User:', result.data.user);
+}
+```
+
+<ParamField path="credentials" type="object" required>
+  User login credentials
+  <Expandable title="Credentials object">
+    <ParamField path="email" type="string" required>
+      User's email address
+    </ParamField>
+    <ParamField path="password" type="string" required>
+      User's password
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<LoginResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if login was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Login data">
+    <ResponseField name="token" type="string">
+      JWT authentication token
+    </ResponseField>
+    <ResponseField name="user" type="User">
+      User profile information
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### register
+
+Registers a new user account.
+
+```javascript
+const result = await register({
+  username: 'anime_fan_123',
+  email: 'user@example.com',
+  password: 'securePassword123'
+});
+
+if (!result.error) {
+  console.log('Registration successful');
+  console.log('User ID:', result.data.userId);
+}
+```
+
+<ParamField path="userData" type="object" required>
+  New user registration data
+  <Expandable title="User data object">
+    <ParamField path="username" type="string" required>
+      Desired username
+    </ParamField>
+    <ParamField path="email" type="string" required>
+      User's email address
+    </ParamField>
+    <ParamField path="password" type="string" required>
+      User's password (should be securely hashed on backend)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<RegisterResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if registration was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Registration data">
+    <ResponseField name="userId" type="string">
+      Newly created user ID
+    </ResponseField>
+    <ResponseField name="token" type="string">
+      JWT authentication token for immediate login
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### logout
+
+Logs out the current user and invalidates their session.
+
+```javascript
+const result = await logout();
+
+if (!result.error) {
+  console.log('Logout successful');
+  // Clear local storage, redirect to login, etc.
+}
+```
+
+**Returns:** `Promise<LogoutResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if logout was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message
+</ResponseField>
+
+---
+
+### verifyToken
+
+Verifies if the current authentication token is valid.
+
+```javascript
+const result = await verifyToken(authToken);
+
+if (!result.error && result.data.valid) {
+  console.log('Token is valid');
+  console.log('User:', result.data.user);
+} else {
+  console.log('Token expired or invalid');
+  // Redirect to login
+}
+```
+
+<ParamField path="token" type="string" required>
+  JWT token to verify
+</ParamField>
+
+**Returns:** `Promise<TokenVerifyResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Verification result">
+    <ResponseField name="valid" type="boolean">
+      Whether the token is valid
+    </ResponseField>
+    <ResponseField name="user" type="User">
+      User information if token is valid
+    </ResponseField>
+    <ResponseField name="expiresAt" type="string">
+      Token expiration timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## Error Handling
+
+All auth service functions return a `ResponseError` object on failure:
+
+```javascript
+const result = await login(credentials);
+
+if (result.error) {
+  switch (result.statusCode) {
+    case 401:
+      console.error('Invalid credentials');
+      break;
+    case 403:
+      console.error('Account locked or suspended');
+      break;
+    case 429:
+      console.error('Too many login attempts');
+      break;
+    default:
+      console.error('Login error:', result.message);
+  }
+}
+```
+
+<ResponseField name="error" type="boolean">
+  True if an error occurred
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error message description
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code
+</ResponseField>
+
+## Best Practices
+
+<Tip>
+  Store authentication tokens securely using `localStorage` or `sessionStorage`, and include them in API request headers:
+  
+  ```javascript
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+  ```
+</Tip>
+
+<Warning>
+  Never store passwords in plain text. Always validate inputs on the frontend before sending to the backend.
+</Warning>

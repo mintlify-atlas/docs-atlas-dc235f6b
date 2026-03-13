@@ -1,0 +1,502 @@
+---
+title: Service Layer
+description: Understanding the service architecture and API integration patterns
+---
+
+The service layer handles all external API communication, data fetching, and business logic. It provides a clean abstraction between the API and the rest of the application.
+
+## Service Architecture
+
+Services in AnimeAho Client follow these principles:
+
+1. **Single Responsibility** - Each service handles a specific domain
+2. **Type Safety** - Return typed model objects
+3. **Error Handling** - Consistent error response format
+4. **Async/Await** - Modern promise-based API
+
+## Service Structure
+
+```javascript
+/**
+ * Service function documentation
+ *
+ * @async
+ * @param {string} parameter - Parameter description
+ * @returns {Promise<ResponseType|ResponseError>}
+ */
+export async function serviceName(parameter) {
+    const endpoint = BASE_URL + ENDPOINTS.PATH(parameter);
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        // Validate response
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        // Return typed model
+        return new ResponseModel(data);
+    } catch (error) {
+        // Handle network errors
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+## AnimeService
+
+The main service for anime-related operations.
+
+**Location:** `js/services/animeService.js`
+
+### Configuration
+
+```javascript
+import { 
+    BACKEND_ENDPOINTS, 
+    BACKEND_API_BASE_URL, 
+    ANIME_API_BASE_URL, 
+    ANIME_ENDPOINTS 
+} from "../config/api.config.js";
+
+import { 
+    LatestEpisodesResponse, 
+    AnimeBySlugResponse, 
+    EpisodeBySlugResponse,
+    ResponseError 
+} from "../models/Anime.js";
+```
+
+### Get Anime by Slug
+
+Retrieves complete anime information:
+
+```javascript
+export async function getAnimeBySlug(animeSlug) {
+    const endpoint = ANIME_API_BASE_URL + ANIME_ENDPOINTS.ANIME_SLUG(animeSlug);
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new AnimeBySlugResponse(data);
+    } catch (error) {
+        console.error("Error al obtener anime:", error);
+        return new ResponseError({
+            data: null, 
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0, 
+            url: endpoint
+        });
+    }
+}
+```
+
+**Usage:**
+
+```javascript
+const animeData = await getAnimeBySlug('one-piece');
+
+if (animeData.error) {
+    console.error('Failed to load anime:', animeData.message);
+} else {
+    console.log('Anime title:', animeData.data.title);
+    console.log('Episodes:', animeData.data.episode.length);
+}
+```
+
+### Get Episode by Slug
+
+Retrieves episode information with video servers:
+
+```javascript
+export async function getEpisodeBySlug(episodeSlug) {
+    const endpoint = ANIME_API_BASE_URL + ANIME_ENDPOINTS.EPISODE_SLUG(episodeSlug);
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new EpisodeBySlugResponse(data);
+    } catch (error) {
+        console.error("Error al obtener episodio:", error);
+        return new ResponseError({
+            data: null, 
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0, 
+            url: endpoint
+        });
+    }
+}
+```
+
+### Get Episode by Anime Slug and Number
+
+Retrieves a specific episode by anime slug and episode number:
+
+```javascript
+export async function getEpisodeBySlugNumber(animeSlug, episodeNumber) {
+    const endpoint = ANIME_API_BASE_URL + 
+        ANIME_ENDPOINTS.EPISODE_SLUG_NUMER(animeSlug, episodeNumber);
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new EpisodeBySlugNumberResponse(data);
+    } catch (error) {
+        console.error("Error al obtener episodio por número:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+### Get Latest Episodes
+
+Retrieves the most recently released episodes:
+
+```javascript
+export async function getLatestEpisodes() {
+    const endpoint = ANIME_API_BASE_URL + ANIME_ENDPOINTS.LATEST_EPISODES;
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new LatestEpisodesResponse(data);
+    } catch (error) {
+        console.error("Error al obtener últimos episodios:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+### Get Airing Animes
+
+Retrieves currently airing anime:
+
+```javascript
+export async function getAiringAnimes() {
+    const endpoint = ANIME_API_BASE_URL + ANIME_ENDPOINTS.LIST_ANIMES_ON_AIR;
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new AiringAnimesResponse(data);
+    } catch (error) {
+        console.error("Error al obtener animes en emisión:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+## Search Services
+
+### Search with Text Query
+
+Searches anime with text and supports request cancellation:
+
+```javascript
+export async function searchAnimeWithText(searchQuery, page, signal = null) {
+    const params = new URLSearchParams({ query: searchQuery, page });
+    const endpoint = `${ANIME_API_BASE_URL}${ANIME_ENDPOINTS.SEARCH_ANIME}?${params}`;
+    
+    try {
+        const response = await fetch(endpoint, { signal });
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new SearchAnimeResponse(data);
+    } catch (error) {
+        // Ignore cancelled requests
+        if (error.name === 'AbortError') return;
+        
+        console.error("Error al buscar anime:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+**Request Cancellation Pattern:**
+
+```javascript
+let currentController = null;
+
+async function searchAnime(value) {
+    // Cancel previous request
+    if (currentController) currentController.abort();
+    
+    // Create new controller
+    currentController = new AbortController();
+    
+    // Make request with signal
+    const response = await searchAnimeWithText(
+        value, 
+        1,
+        currentController.signal
+    );
+}
+```
+
+### Search with Filters
+
+Advanced search with multiple filters:
+
+```javascript
+export async function searchAnimeFilter({
+    order = 'default',
+    types = [],
+    genres = [],
+    statuses = [],
+    page = 1
+} = {}) {
+    const params = new URLSearchParams({ order, page });
+    const endpoint = `${BACKEND_API_BASE_URL}${BACKEND_ENDPOINTS.PROXY_SEARCH_BY_FILTER}?${params}`;
+    
+    try {
+        const requestBody = { order, types, genres, statuses, page };
+        
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new SearchAnimeResponse(data);
+    } catch (error) {
+        console.error("Error al buscar con filtros:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+**Usage Example:**
+
+```javascript
+const filterOptions = {
+    types: ['tv', 'movie'],
+    order: 'popularity',
+    genres: ['action', 'adventure'],
+    statuses: [1, 2], // 1=airing, 2=completed
+    page: 1
+};
+
+const results = await searchAnimeFilter(filterOptions);
+```
+
+### Search by URL
+
+Searches anime from an external URL:
+
+```javascript
+export async function searchAnimeWithUrl(searchUrl) {
+    const params = new URLSearchParams({ url: searchUrl });
+    const endpoint = `${ANIME_API_BASE_URL}${ANIME_ENDPOINTS.SEARCH_BY_URL}?${params}`;
+    
+    try {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new SearchAnimeResponse(data);
+    } catch (error) {
+        console.error("Error al buscar por URL:", error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || "Error de conexión",
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+```
+
+## Error Handling Pattern
+
+### ResponseError Model
+
+All services return a consistent error format:
+
+```javascript
+export class ResponseError {
+    constructor(data) {
+        this.data = data.data ? new DataError(data) : null;
+        this.error = data.error;
+        this.message = data.message;
+        this.statusCode = data.statusCode;
+        this.url = data.url;
+    }
+}
+```
+
+### Checking for Errors
+
+```javascript
+const response = await getAnimeBySlug('invalid-slug');
+
+if (response.error) {
+    console.error(`Error ${response.statusCode}: ${response.message}`);
+    handleAnimeNotFound();
+    return;
+}
+
+// Success - proceed with data
+renderAnimeDetail(response.data);
+```
+
+## Service Integration Patterns
+
+### Sequential Loading
+
+```javascript
+async function loadAnimeAndEpisode(animeSlug, episodeNumber) {
+    const anime = await getAnimeBySlug(animeSlug);
+    
+    if (anime.error) return;
+    
+    const episode = await getEpisodeBySlugNumber(animeSlug, episodeNumber);
+    
+    return { anime: anime.data, episode: episode.data };
+}
+```
+
+### Parallel Loading
+
+```javascript
+async function loadHomePageData() {
+    const [airing, latest, search] = await Promise.all([
+        getAiringAnimes(),
+        getLatestEpisodes(),
+        searchAnimeFilter({ order: 'added' })
+    ]);
+    
+    return { airing, latest, search };
+}
+```
+
+### Retry Pattern
+
+```javascript
+async function fetchWithRetry(fetchFn, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        const result = await fetchFn();
+        
+        if (!result.error) return result;
+        
+        if (i < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+    }
+    
+    throw new Error('Max retries reached');
+}
+```
+
+## API Endpoints
+
+Endpoints are centralized in the configuration:
+
+```javascript
+// config/api.config.js
+export const ANIME_API_BASE_URL = 'https://animeflv.ahmedrangel.com';
+
+export const ANIME_ENDPOINTS = {
+    ANIME_SLUG: (slug) => `/api/anime/${slug}`,
+    EPISODE_SLUG: (slug) => `/api/anime/episode/${slug}`,
+    EPISODE_SLUG_NUMER: (slug, number) => `/api/anime/${slug}/episode/${number}`,
+    LIST_ANIMES_ON_AIR: '/api/list/animes-on-air',
+    LATEST_EPISODES: '/api/list/latest-episodes',
+    SEARCH_ANIME: '/api/search',
+    SEARCH_BY_URL: '/api/search/by-url'
+};
+
+export const BACKEND_API_BASE_URL = 'https://animeaho-backend.vercel.app/api';
+
+export const BACKEND_ENDPOINTS = {
+    PROXY_SEARCH_BY_FILTER: '/proxy/anime/search-filter',
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    GET_FAVORITES: '/favorites',
+    ADD_FAVORITE: '/favorites',
+    GET_COMMENTS: (animeId, episodeId) => `/comments/${animeId}/${episodeId}`,
+    ADD_COMMENT: '/comments'
+};
+```
+
+<Note>
+The application uses two separate APIs: the public AnimeFlv API for anime data and a custom backend for authentication and user features.
+</Note>
+
+## Best Practices
+
+1. **Always return typed models** - Use model classes to transform API responses
+2. **Handle all error cases** - Network errors, HTTP errors, and invalid responses
+3. **Use AbortController** - For cancellable requests like search
+4. **Log errors** - Include helpful error messages for debugging
+5. **Document parameters** - Use JSDoc comments for all service functions
+6. **Keep services pure** - No direct DOM manipulation in services

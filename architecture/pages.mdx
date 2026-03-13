@@ -1,0 +1,582 @@
+---
+title: Page Architecture
+description: Understanding page controllers and how pages initialize and interact with the application
+---
+
+Pages in AnimeAho Client are **controller modules** that orchestrate the initialization and interaction between services, components, and user events. Each HTML page has a corresponding JavaScript module that acts as its entry point.
+
+## Page Structure
+
+Every page follows this basic pattern:
+
+```javascript
+// Import dependencies
+import { serviceFunction } from '../services/serviceName.js';
+import { renderComponent } from '../components/ComponentName.js';
+import { utilityFunction } from '../utils/utilityName.js';
+
+/**
+ * Initialize the page
+ * @async
+ * @returns {Promise<void>}
+ */
+async function initializePage() {
+    try {
+        // 1. Extract URL parameters
+        const params = extractParams();
+        
+        // 2. Validate inputs
+        if (!params) {
+            handleError();
+            return;
+        }
+        
+        // 3. Fetch data from services
+        const data = await serviceFunction(params);
+        
+        // 4. Check for errors
+        if (!data || data.error) {
+            handleError();
+            return;
+        }
+        
+        // 5. Update page metadata
+        updatePageTitle(data.title);
+        
+        // 6. Render components
+        renderComponent(data);
+        
+        // 7. Initialize event listeners
+        attachEventListeners();
+        
+    } catch (error) {
+        console.error('Error initializing page:', error);
+        handleError();
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initializePage);
+```
+
+## Page Controllers
+
+### Index Page (Home)
+
+The home page loads multiple sections in parallel.
+
+**Location:** `js/pages/index.js`
+
+```javascript
+import {
+    getAiringAnimes,
+    getLatestEpisodes,
+    searchAnimeFilter,
+} from '../services/animeService.js';
+import { renderAnimeCard } from '../components/AnimeCard.js';
+import { createAnimeLinks } from '../components/AnimeLink.js';
+import { addListenerInput } from '../utils/search.js';
+import { displayErrorMessage } from '../utils/errorHandler.js';
+
+async function initializeHomePage() {
+    try {
+        // Load all sections
+        await loadAiringAnimes();
+        await loadLatestEpisodes();
+        await loadLatestAnimes();
+        
+        // Initialize search
+        addListenerInput();
+
+    } catch (error) {
+        console.error('Error al inicializar la página principal:', error);
+        displayErrorMessage('Error al cargar el contenido. Intenta recargar la página.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initializeHomePage);
+```
+
+**Section Loaders:**
+
+```javascript
+async function loadAiringAnimes() {
+    try {
+        const response = await getAiringAnimes();
+        const section = document.getElementById('airing-animes');
+
+        if (!section) {
+            console.warn('Sección "airing-animes" no encontrada en el DOM');
+            return;
+        }
+
+        if (!response.data || response.data.length === 0) {
+            section.innerHTML = '<p>No hay animes en emisión.</p>';
+            return;
+        }
+
+        response.data.forEach(anime => {
+            const animeLink = createAnimeLinks(anime);
+            section.appendChild(animeLink);
+        });
+    } catch (error) {
+        console.error('Error al cargar animes en emisión:', error);
+    }
+}
+
+async function loadLatestEpisodes() {
+    try {
+        const response = await getLatestEpisodes();
+        const section = document.getElementById('latest-episodes');
+
+        if (!section) return;
+
+        if (!response.data || response.data.length === 0) {
+            section.innerHTML = '<p>No hay episodios recientes.</p>';
+            return;
+        }
+
+        response.data.forEach(episode => {
+            const episodeCard = renderAnimeCard(
+                episode,
+                `Episodio: ${episode.number}`,
+                false // Navigate to episode, not detail
+            );
+            section.appendChild(episodeCard);
+        });
+    } catch (error) {
+        console.error('Error al cargar últimos episodios:', error);
+    }
+}
+
+async function loadLatestAnimes() {
+    try {
+        const filterOptions = {
+            types: ['tv', 'movie', 'special', 'ova'],
+            order: 'added',
+            genres: [],
+            statuses: [1, 2, 3]
+        };
+
+        const response = await searchAnimeFilter(filterOptions);
+        const section = document.getElementById('latest-animes');
+
+        if (!section) return;
+
+        if (!response.data?.media || response.data.media.length === 0) {
+            section.innerHTML = '<p>No hay animes disponibles.</p>';
+            return;
+        }
+
+        response.data.media.forEach(anime => {
+            const animeCard = renderAnimeCard(anime, anime.type, true);
+            section.appendChild(animeCard);
+        });
+    } catch (error) {
+        displayErrorMessage(`Error al cargar últimos animes: ${error}`);
+    }
+}
+```
+
+### Anime Detail Page
+
+Displays complete information about a specific anime.
+
+**Location:** `js/pages/anime.js`
+
+```javascript
+import { renderAnimeDetail } from '../components/AnimeDetail.js';
+import { getAnimeBySlug } from '../services/animeService.js';
+import { addListenerInput } from '../utils/search.js';
+import { 
+    handleAnimeNotFound, 
+    handleLoadError, 
+    handleMissingSlug 
+} from '../utils/errorHandler.js';
+import { updatePageTitle, extractSlugFromURL } from '../utils/urlParams.js';
+
+async function initializeAnimeDetailPage() {
+    try {
+        // 1. Extract slug from URL
+        const animeSlug = extractSlugFromURL();
+
+        // 2. Validate slug
+        if (!animeSlug) {
+            handleMissingSlug();
+            return;
+        }
+
+        // 3. Fetch anime data
+        const animeData = await getAnimeBySlug(animeSlug);
+
+        // 4. Handle errors
+        if (!animeData || !animeData.data) {
+            handleAnimeNotFound();
+            return;
+        }
+        
+        // 5. Update page metadata
+        updatePageTitle(animeData.data.title);
+        
+        // 6. Render anime details
+        renderAnimeDetail(animeData.data);
+        
+        // 7. Initialize search functionality
+        addListenerInput();
+        
+    } catch (error) {
+        console.error('Error al cargar la página de detalles del anime:', error);
+        handleLoadError();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initializeAnimeDetailPage);
+```
+
+### Watch Page (Episode Player)
+
+Handles video playback and episode navigation.
+
+**Location:** `js/pages/watch.js`
+
+**Key Responsibilities:**
+- Extract episode slug from URL
+- Load episode data with video servers
+- Initialize video player
+- Handle episode navigation (previous/next)
+- Load and display comments
+
+### Browse Page
+
+Provides advanced search and filtering.
+
+**Location:** `js/pages/browse.js`
+
+```javascript
+import { addListenerInput } from "../utils/search.js";
+
+async function initializeAnimeBrowsePage() {
+    try {
+        addListenerInput();
+    } catch (error) {
+        console.error('Error al inicializar la página de búsqueda:', error);
+        displayErrorMessage('Error al cargar el contenido.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initializeAnimeBrowsePage);
+```
+
+### Search Page
+
+Displays search results with pagination.
+
+**Location:** `js/pages/search.js`
+
+**Key Responsibilities:**
+- Extract search query from URL
+- Display search results as cards
+- Handle pagination
+- Show empty state when no results
+
+## Page Lifecycle
+
+```
+┌─────────────────────────────────────┐
+│   1. HTML Page Loaded                │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   2. DOMContentLoaded Event          │
+│      triggers initialization         │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   3. Extract URL Parameters          │
+│      (slug, query, page, etc.)       │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   4. Validate Inputs                 │
+│      (handle missing parameters)     │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   5. Fetch Data from Services        │
+│      (async API calls)               │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   6. Handle Response                 │
+│      (check for errors)              │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   7. Update Page Metadata            │
+│      (title, description)            │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   8. Render Components               │
+│      (build and insert DOM)          │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   9. Attach Event Listeners          │
+│      (user interactions)             │
+└─────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│   10. Page Ready                     │
+│       (user can interact)            │
+└─────────────────────────────────────┘
+```
+
+## URL Parameter Handling
+
+Pages extract parameters using utility functions:
+
+```javascript
+// utils/urlParams.js
+
+/**
+ * Extrae el slug de la URL actual
+ * @returns {string|null} El slug o null si no existe
+ */
+export function extractSlugFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('slug');
+}
+
+/**
+ * Actualiza el título de la página
+ * @param {string} title - Nuevo título
+ */
+export function updatePageTitle(title) {
+    document.title = `${title} - AnimeAho`;
+}
+```
+
+**Usage in Pages:**
+
+```javascript
+const animeSlug = extractSlugFromURL();
+const searchQuery = new URLSearchParams(window.location.search).get('query');
+const pageNumber = parseInt(new URLSearchParams(window.location.search).get('page')) || 1;
+```
+
+## Navigation Between Pages
+
+Navigation is handled through utility functions:
+
+```javascript
+// utils/navigation.js
+
+export function navigateToAnimeDetail(slug) {
+    window.location.href = `./anime.html?slug=${slug}`;
+}
+
+export function navigateToEpisode(episodeSlug) {
+    window.location.href = `./watch.html?slug=${episodeSlug}`;
+}
+
+export function navigateToAnimeSearchList(page, query) {
+    if (query) {
+        window.location.href = `./search.html?query=${query}&page=${page}`;
+    } else {
+        const input = document.querySelector('.header__search-input');
+        window.location.href = `./search.html?query=${input.value}&page=${page}`;
+    }
+}
+```
+
+## Error Handling
+
+### Page-Level Error Handlers
+
+```javascript
+// utils/errorHandler.js
+
+export function handleMissingSlug() {
+    console.error('No se proporcionó un slug válido en la URL');
+    const mainContent = document.querySelector('.main__inner');
+    if (mainContent) {
+        mainContent.innerHTML = 
+            '<p class="error-message">Error: Episodio no especificado.</p>';
+    }
+}
+
+export function handleAnimeNotFound() {
+    console.error('El anime solicitado no fue encontrado');
+    const mainContent = document.querySelector('.main__inner');
+    if (mainContent) {
+        mainContent.innerHTML = 
+            '<p class="error-message">Error: No se encontró el anime.</p>';
+    }
+}
+
+export function handleLoadError() {
+    const mainContent = document.querySelector('.main__inner');
+    if (mainContent) {
+        mainContent.innerHTML = 
+            '<p class="error-message">Error al cargar los datos.</p>';
+    }
+}
+
+export function displayErrorMessage(message) {
+    const mainContent = document.querySelector('.main__content') || 
+                       document.querySelector('main');
+    if (mainContent) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message-container';
+        errorDiv.innerHTML = `<p class="error-message">${message}</p>`;
+        mainContent.prepend(errorDiv);
+    }
+}
+```
+
+## Shared Functionality
+
+### Search Input Listener
+
+All pages initialize the global search functionality:
+
+```javascript
+import { addListenerInput } from '../utils/search.js';
+
+async function initializePage() {
+    // ... page-specific logic ...
+    
+    // Initialize search functionality
+    addListenerInput();
+}
+```
+
+**Search Implementation:**
+
+```javascript
+// utils/search.js
+import { searchAnimeWithText } from "../services/animeService.js";
+import { hideDropdown, renderDropdown } from "../components/SearchDropdown.js";
+import { navigateToAnimeSearchList } from "./navigation.js";
+
+let currentController = null;
+
+export function addListenerInput() {
+    const input = document.querySelector('.header__search-input');
+    const button = document.querySelector('.header__search-link');
+    
+    // Real-time search as user types
+    input.addEventListener('input', () => searchAnime(input.value, input));
+    
+    // Hide dropdown when focus lost
+    input.addEventListener('blur', () => {
+        setTimeout(() => hideDropdown(), 150);
+    });
+    
+    // Search on Enter key
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            navigateToAnimeSearchList(1);
+        }
+    });
+    
+    // Search on button click
+    button.addEventListener('click', () => {
+        if (input.value.length > 0) {
+            navigateToAnimeSearchList(1);
+        }
+    });
+}
+
+async function searchAnime(value, input) {
+    if (value.trim().length === 0) {
+        hideDropdown();
+        return;
+    }
+
+    // Cancel previous request
+    if (currentController) currentController.abort();
+    currentController = new AbortController();
+
+    const response = await searchAnimeWithText(
+        value, 
+        1,
+        currentController.signal
+    );
+
+    if (input.value.trim().length === 0) {
+        hideDropdown();
+        return;
+    }
+
+    if (!response.success) {
+        dropdown.innerHTML = '<p>No se encontraron coincidencias</p>';
+        return;
+    }
+
+    renderDropdown(response.data.media);
+}
+```
+
+## Page Initialization Patterns
+
+### Simple Initialization
+
+```javascript
+async function initializePage() {
+    try {
+        await loadData();
+        setupUI();
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initializePage);
+```
+
+### Sequential Loading
+
+```javascript
+async function initializePage() {
+    try {
+        await loadCriticalData();
+        await loadSecondaryData();
+        setupInteractions();
+    } catch (error) {
+        handleError(error);
+    }
+}
+```
+
+### Parallel Loading
+
+```javascript
+async function initializePage() {
+    try {
+        await Promise.all([
+            loadSection1(),
+            loadSection2(),
+            loadSection3()
+        ]);
+        setupUI();
+    } catch (error) {
+        handleError(error);
+    }
+}
+```
+
+## Best Practices
+
+1. **Always validate inputs** - Check URL parameters before using them
+2. **Handle all error cases** - Network failures, missing data, invalid params
+3. **Update page metadata** - Set appropriate page titles
+4. **Initialize shared features** - Search, navigation, etc.
+5. **Use try-catch blocks** - Wrap initialization logic
+6. **Log errors** - Help with debugging
+7. **Provide user feedback** - Show loading states and error messages
+
+<Note>
+Pages are kept lightweight and focused on orchestration. Heavy logic belongs in services and components.
+</Note>

@@ -1,0 +1,190 @@
+---
+title: 'Validator Utilities'
+description: 'Validation functions for verifying episode existence and data integrity'
+---
+
+## Overview
+
+The validator utilities provide functions for validating anime and episode data before performing operations. These utilities help prevent navigation to non-existent content and ensure data integrity.
+
+## Functions
+
+### validateAndGetEpisodeSlug
+
+Verifies if an episode exists and returns its complete slug identifier. This is useful for validating episode navigation before redirecting users.
+
+```javascript validator.js:11-22
+export async function validateAndGetEpisodeSlug(animeSlug, episodeNumber) {
+    if (episodeNumber < 1) return null;
+    
+    try {
+        const response = await getEpisodeBySlugNumber(animeSlug, episodeNumber);
+        if (!response || !response.success || !response.data) return null;
+        return `${animeSlug}-${episodeNumber}`;
+    } catch (error) {
+        console.warn(`No se pudo validar episodio ${animeSlug}-${episodeNumber}:`, error);
+        return null;
+    }
+}
+```
+
+<ParamField path="animeSlug" type="string" required>
+  The slug identifier for the anime (e.g., "one-piece")
+</ParamField>
+
+<ParamField path="episodeNumber" type="number" required>
+  The episode number to validate (must be >= 1)
+</ParamField>
+
+**Returns:** `Promise<string|null>`
+
+Returns the complete episode slug (e.g., "one-piece-1045") if the episode exists, or `null` if:
+- The episode number is less than 1
+- The episode doesn't exist in the database
+- The API request fails
+
+#### Usage Example
+
+```javascript
+import { validateAndGetEpisodeSlug } from './utils/validator.js';
+import { navigateToEpisode } from './utils/navigation.js';
+
+// Validate before navigation
+async function goToNextEpisode(animeSlug, currentEpisode) {
+    const nextEpisodeSlug = await validateAndGetEpisodeSlug(
+        animeSlug, 
+        currentEpisode + 1
+    );
+    
+    if (nextEpisodeSlug) {
+        navigateToEpisode(nextEpisodeSlug);
+    } else {
+        console.log('No next episode available');
+        // Disable "Next Episode" button
+        document.querySelector('.next-episode-btn').disabled = true;
+    }
+}
+
+// Usage in episode player
+await goToNextEpisode('one-piece', 1045);
+// Returns: "one-piece-1046" if it exists, or null if not
+```
+
+## Integration Example
+
+```javascript
+import { validateAndGetEpisodeSlug } from './utils/validator.js';
+import { navigateToEpisode } from './utils/navigation.js';
+
+// Episode navigation controls
+class EpisodeNavigator {
+    constructor(animeSlug, currentEpisodeNumber) {
+        this.animeSlug = animeSlug;
+        this.currentEpisodeNumber = currentEpisodeNumber;
+        this.initializeControls();
+    }
+
+    async initializeControls() {
+        // Check if previous episode exists
+        const prevSlug = await validateAndGetEpisodeSlug(
+            this.animeSlug, 
+            this.currentEpisodeNumber - 1
+        );
+        
+        const prevBtn = document.querySelector('.prev-episode-btn');
+        if (prevSlug) {
+            prevBtn.addEventListener('click', () => {
+                navigateToEpisode(prevSlug);
+            });
+        } else {
+            prevBtn.disabled = true;
+            prevBtn.title = 'Este es el primer episodio';
+        }
+
+        // Check if next episode exists
+        const nextSlug = await validateAndGetEpisodeSlug(
+            this.animeSlug, 
+            this.currentEpisodeNumber + 1
+        );
+        
+        const nextBtn = document.querySelector('.next-episode-btn');
+        if (nextSlug) {
+            nextBtn.addEventListener('click', () => {
+                navigateToEpisode(nextSlug);
+            });
+        } else {
+            nextBtn.disabled = true;
+            nextBtn.title = 'Este es el último episodio disponible';
+        }
+    }
+}
+
+// Initialize episode navigator
+const navigator = new EpisodeNavigator('naruto', 50);
+```
+
+## Advanced Usage: Batch Validation
+
+```javascript
+import { validateAndGetEpisodeSlug } from './utils/validator.js';
+
+// Validate multiple episodes at once
+async function getAvailableEpisodes(animeSlug, startEpisode, endEpisode) {
+    const validationPromises = [];
+    
+    for (let i = startEpisode; i <= endEpisode; i++) {
+        validationPromises.push(
+            validateAndGetEpisodeSlug(animeSlug, i)
+                .then(slug => ({ episode: i, slug, exists: !!slug }))
+        );
+    }
+    
+    const results = await Promise.all(validationPromises);
+    return results.filter(r => r.exists);
+}
+
+// Check which episodes exist in a range
+const available = await getAvailableEpisodes('one-piece', 1040, 1050);
+console.log('Available episodes:', available);
+// Output: [{ episode: 1040, slug: 'one-piece-1040', exists: true }, ...]
+```
+
+<Note>
+  This function makes an API call to verify episode existence, so it's asynchronous. Always use `await` when calling it, and handle the case where it returns `null`.
+</Note>
+
+<Warning>
+  Episode numbers must be 1 or greater. The function automatically returns `null` for episode numbers less than 1 without making an API call.
+</Warning>
+
+## Error Handling
+
+The validator gracefully handles errors and returns `null` instead of throwing exceptions:
+
+```javascript
+import { validateAndGetEpisodeSlug } from './utils/validator.js';
+
+// Safe to call without try-catch
+const slug = await validateAndGetEpisodeSlug('one-piece', 9999);
+
+if (slug) {
+    // Episode exists, proceed
+    navigateToEpisode(slug);
+} else {
+    // Episode doesn't exist or validation failed
+    console.log('Episode not available');
+}
+```
+
+Errors are logged as warnings to the console but don't interrupt execution:
+
+```
+// Console output when validation fails:
+"No se pudo validar episodio one-piece-9999: Error: Not found"
+```
+
+## See Also
+
+- [Anime Service](/api/services/anime-service) - For the `getEpisodeBySlugNumber` function used internally
+- [Navigation](/api/utils/navigation) - For navigating to validated episodes
+- [Error Handler](/api/utils/error-handler) - For handling validation failures

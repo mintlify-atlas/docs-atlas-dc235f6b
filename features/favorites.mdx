@@ -1,0 +1,556 @@
+---
+title: Favorites
+description: User favorite anime management system for saving and organizing preferred anime titles (feature in development)
+---
+
+## Overview
+
+The Favorites feature allows users to save and manage their preferred anime titles for quick access. Users can add anime to favorites, view their favorites list, and remove items as needed.
+
+<Note>
+The favorites service files (`favoriteService.js`, `favorites.js`, and `FavoriteButton.js`) are currently empty placeholders. This documentation describes the expected architecture based on the existing codebase structure and common patterns.
+</Note>
+
+## Architecture
+
+The favorites system follows a service-component architecture:
+
+```
+js/
+├── services/
+│   └── favoriteService.js  # Favorites API calls
+├── components/
+│   └── FavoriteButton.js   # Toggle favorite button
+└── pages/
+    └── favorites.js        # Favorites list page
+```
+
+## Expected Service Structure
+
+Based on the existing anime service patterns, the favorites service should follow this structure:
+
+### favoriteService.js (Expected)
+
+```javascript
+import { BACKEND_API_BASE_URL, BACKEND_ENDPOINTS } from '../config/api.config.js';
+import { FavoritesResponse, ResponseError } from '../models/Anime.js';
+import { withAuth } from '../utils/auth.js';
+
+/**
+ * Get all favorites for current user
+ * 
+ * @async
+ * @returns {Promise<FavoritesResponse|ResponseError>}
+ */
+export async function getUserFavorites() {
+    const endpoint = BACKEND_API_BASE_URL + BACKEND_ENDPOINTS.FAVORITES;
+    
+    try {
+        const response = await fetch(endpoint, withAuth());
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return new FavoritesResponse(data);
+    } catch (error) {
+        console.error('Error fetching favorites:', error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || 'Error de conexión',
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+
+/**
+ * Add anime to user favorites
+ * 
+ * @async
+ * @param {string} animeSlug - Slug of anime to add
+ * @returns {Promise<Object|ResponseError>}
+ */
+export async function addToFavorites(animeSlug) {
+    const endpoint = BACKEND_API_BASE_URL + BACKEND_ENDPOINTS.ADD_FAVORITE;
+    
+    try {
+        const response = await fetch(endpoint, {
+            ...withAuth(),
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth().headers
+            },
+            body: JSON.stringify({ animeSlug })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return data;
+    } catch (error) {
+        console.error('Error adding to favorites:', error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || 'Error de conexión',
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+
+/**
+ * Remove anime from user favorites
+ * 
+ * @async
+ * @param {string} animeSlug - Slug of anime to remove
+ * @returns {Promise<Object|ResponseError>}
+ */
+export async function removeFromFavorites(animeSlug) {
+    const endpoint = BACKEND_API_BASE_URL + BACKEND_ENDPOINTS.REMOVE_FAVORITE;
+    
+    try {
+        const response = await fetch(endpoint, {
+            ...withAuth(),
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth().headers
+            },
+            body: JSON.stringify({ animeSlug })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) return new ResponseError(data);
+        if (!data.success) return new ResponseError(data);
+        
+        return data;
+    } catch (error) {
+        console.error('Error removing from favorites:', error);
+        return new ResponseError({
+            data: null,
+            error: true,
+            message: error.message || 'Error de conexión',
+            statusCode: 0,
+            url: endpoint
+        });
+    }
+}
+
+/**
+ * Check if anime is in user favorites
+ * 
+ * @async
+ * @param {string} animeSlug - Slug of anime to check
+ * @returns {Promise<boolean>}
+ */
+export async function isFavorite(animeSlug) {
+    const endpoint = `${BACKEND_API_BASE_URL}${BACKEND_ENDPOINTS.CHECK_FAVORITE}/${animeSlug}`;
+    
+    try {
+        const response = await fetch(endpoint, withAuth());
+        const data = await response.json();
+        
+        return data.isFavorite === true;
+    } catch (error) {
+        console.error('Error checking favorite status:', error);
+        return false;
+    }
+}
+```
+
+## Favorite Button Component
+
+Expected implementation for the toggle button in `components/FavoriteButton.js`:
+
+```javascript
+import { addToFavorites, removeFromFavorites, isFavorite } from '../services/favoriteService.js';
+import { isAuthenticated } from '../utils/storage.js';
+import { displayErrorMessage } from '../utils/errorHandler.js';
+
+/**
+ * Render favorite toggle button for anime
+ * 
+ * @param {string} animeSlug - Slug of the anime
+ * @param {HTMLElement} container - Container to append button to
+ * @returns {Promise<HTMLButtonElement>}
+ */
+export async function renderFavoriteButton(animeSlug, container) {
+    const button = document.createElement('button');
+    button.className = 'favorite-btn';
+    button.setAttribute('aria-label', 'Add to favorites');
+    
+    if (!isAuthenticated()) {
+        button.disabled = true;
+        button.title = 'Login to add favorites';
+        button.innerHTML = createHeartIcon(false);
+        container.appendChild(button);
+        return button;
+    }
+    
+    // Check current favorite status
+    const favorited = await isFavorite(animeSlug);
+    updateButtonState(button, favorited);
+    
+    // Add click handler
+    button.addEventListener('click', async () => {
+        await toggleFavorite(button, animeSlug);
+    });
+    
+    container.appendChild(button);
+    return button;
+}
+
+/**
+ * Toggle favorite status for anime
+ * 
+ * @param {HTMLButtonElement} button - The favorite button element
+ * @param {string} animeSlug - Slug of the anime
+ */
+async function toggleFavorite(button, animeSlug) {
+    button.disabled = true;
+    
+    const isFavorited = button.classList.contains('favorite-btn--active');
+    
+    let response;
+    if (isFavorited) {
+        response = await removeFromFavorites(animeSlug);
+    } else {
+        response = await addToFavorites(animeSlug);
+    }
+    
+    if (response.success) {
+        updateButtonState(button, !isFavorited);
+    } else {
+        displayErrorMessage(response.message || 'Error updating favorites');
+    }
+    
+    button.disabled = false;
+}
+
+/**
+ * Update button visual state
+ * 
+ * @param {HTMLButtonElement} button - Button element
+ * @param {boolean} isFavorited - Whether anime is favorited
+ */
+function updateButtonState(button, isFavorited) {
+    if (isFavorited) {
+        button.classList.add('favorite-btn--active');
+        button.setAttribute('aria-label', 'Remove from favorites');
+        button.title = 'Remove from favorites';
+        button.innerHTML = createHeartIcon(true);
+    } else {
+        button.classList.remove('favorite-btn--active');
+        button.setAttribute('aria-label', 'Add to favorites');
+        button.title = 'Add to favorites';
+        button.innerHTML = createHeartIcon(false);
+    }
+}
+
+/**
+ * Create heart icon SVG
+ * 
+ * @param {boolean} filled - Whether heart should be filled
+ * @returns {string} SVG markup
+ */
+function createHeartIcon(filled) {
+    const fillColor = filled ? '#ff3366' : 'none';
+    const strokeColor = filled ? '#ff3366' : '#ffffff';
+    
+    return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>
+    `;
+}
+```
+
+## Favorites Page
+
+Expected implementation for `pages/favorites.js`:
+
+```javascript
+import { getUserFavorites } from '../services/favoriteService.js';
+import { renderAnimeCard } from '../components/AnimeCard.js';
+import { requireAuth } from '../utils/auth.js';
+import { displayErrorMessage } from '../utils/errorHandler.js';
+import { addListenerInput } from '../utils/search.js';
+
+/**
+ * Initialize favorites page
+ * 
+ * @async
+ */
+async function initializeFavoritesPage() {
+    // Require authentication
+    await requireAuth('/login.html');
+    
+    try {
+        await loadFavorites();
+        addListenerInput();
+    } catch (error) {
+        console.error('Error initializing favorites page:', error);
+        displayErrorMessage('Error al cargar favoritos. Intenta recargar la página.');
+    }
+}
+
+/**
+ * Load and render user favorites
+ * 
+ * @async
+ */
+async function loadFavorites() {
+    const response = await getUserFavorites();
+    const container = document.getElementById('favorites-list');
+    
+    if (!container) {
+        console.warn('Favorites container not found in DOM');
+        return;
+    }
+    
+    if (!response.success) {
+        container.innerHTML = '<p>Error al cargar favoritos.</p>';
+        return;
+    }
+    
+    if (!response.data || response.data.length === 0) {
+        container.innerHTML = '<p class="empty-state">No tienes animes favoritos todavía.</p>';
+        return;
+    }
+    
+    // Clear container
+    container.innerHTML = '';
+    
+    // Render favorite anime cards
+    response.data.forEach(anime => {
+        const card = renderAnimeCard(anime, anime.type, true);
+        container.appendChild(card);
+    });
+}
+
+/**
+ * Refresh favorites list
+ * Useful after removing a favorite
+ */
+export async function refreshFavorites() {
+    await loadFavorites();
+}
+
+document.addEventListener('DOMContentLoaded', initializeFavoritesPage);
+```
+
+## Integration with Anime Detail Page
+
+Add the favorite button to anime detail pages:
+
+```javascript
+import { renderFavoriteButton } from '../components/FavoriteButton.js';
+import { renderAnimeDetail } from '../components/AnimeDetail.js';
+import { getAnimeBySlug } from '../services/animeService.js';
+
+async function initializeAnimeDetailPage() {
+    const animeSlug = extractSlugFromURL();
+    const animeData = await getAnimeBySlug(animeSlug);
+    
+    if (!animeData || !animeData.data) {
+        handleAnimeNotFound();
+        return;
+    }
+    
+    renderAnimeDetail(animeData.data);
+    
+    // Add favorite button
+    const buttonContainer = document.getElementById('favorite-container');
+    if (buttonContainer) {
+        await renderFavoriteButton(animeSlug, buttonContainer);
+    }
+}
+```
+
+## API Endpoint Configuration
+
+Expected endpoint definitions in `config/api.config.js`:
+
+```javascript
+export const BACKEND_ENDPOINTS = {
+    FAVORITES: '/user/favorites',
+    ADD_FAVORITE: '/user/favorites/add',
+    REMOVE_FAVORITE: '/user/favorites/remove',
+    CHECK_FAVORITE: '/user/favorites/check',
+    // ... other endpoints
+};
+```
+
+## Usage Examples
+
+### Check if Anime is Favorited
+
+```javascript
+import { isFavorite } from '../services/favoriteService.js';
+
+const favorited = await isFavorite('my-hero-academia');
+if (favorited) {
+    console.log('Anime is in favorites');
+}
+```
+
+### Add to Favorites
+
+```javascript
+import { addToFavorites } from '../services/favoriteService.js';
+
+const response = await addToFavorites('attack-on-titan');
+if (response.success) {
+    console.log('Added to favorites!');
+}
+```
+
+### Remove from Favorites
+
+```javascript
+import { removeFromFavorites } from '../services/favoriteService.js';
+
+const response = await removeFromFavorites('demon-slayer');
+if (response.success) {
+    console.log('Removed from favorites');
+}
+```
+
+### Load All Favorites
+
+```javascript
+import { getUserFavorites } from '../services/favoriteService.js';
+
+const favorites = await getUserFavorites();
+if (favorites.success) {
+    console.log('Favorite anime:', favorites.data);
+}
+```
+
+## Features
+
+<Card title="Quick Access" icon="star">
+Save favorite anime for instant access without searching.
+</Card>
+
+<Card title="Personal Collection" icon="folder">
+Build and manage your personal anime collection.
+</Card>
+
+<Card title="One-Click Toggle" icon="heart">
+Simple heart icon button to add or remove favorites.
+</Card>
+
+<Card title="Authentication Required" icon="lock">
+Favorites are user-specific and require authentication.
+</Card>
+
+## Expected Data Structure
+
+### Favorites Response
+
+```javascript
+{
+    success: true,
+    data: [
+        {
+            slug: 'anime-slug',
+            title: 'Anime Title',
+            cover: 'https://example.com/cover.jpg',
+            type: 'TV',
+            rating: '4.5',
+            status: 'Airing',
+            addedAt: '2024-01-15T10:30:00Z'
+        },
+        // ... more favorites
+    ]
+}
+```
+
+### Add/Remove Response
+
+```javascript
+{
+    success: true,
+    message: 'Anime added to favorites',
+    data: {
+        animeSlug: 'anime-slug',
+        favorited: true
+    }
+}
+```
+
+## Error Handling
+
+<Accordion title="Unauthenticated Users">
+```javascript
+if (!isAuthenticated()) {
+    button.disabled = true;
+    button.title = 'Login to add favorites';
+    return;
+}
+```
+Disables favorite button for users who aren't logged in.
+</Accordion>
+
+<Accordion title="Network Errors">
+```javascript
+catch (error) {
+    console.error('Error updating favorites:', error);
+    displayErrorMessage('Error al actualizar favoritos');
+}
+```
+Gracefully handles API failures and displays user-friendly messages.
+</Accordion>
+
+<Accordion title="Empty Favorites">
+```javascript
+if (response.data.length === 0) {
+    container.innerHTML = '<p>No tienes animes favoritos todavía.</p>';
+}
+```
+Shows helpful message when favorites list is empty.
+</Accordion>
+
+## Development Status
+
+<Note>
+**Current Status**: The favorites infrastructure is in place but not yet implemented. The following files require implementation:
+
+- `js/services/favoriteService.js` - Currently empty
+- `js/components/FavoriteButton.js` - Currently empty
+- `js/pages/favorites.js` - Currently empty
+</Note>
+
+## Dependencies
+
+The favorites feature requires:
+
+1. **Authentication System** - Users must be logged in to save favorites
+2. **User Service** - Connects favorites to user accounts
+3. **Backend API** - Stores and retrieves favorite data
+4. **Anime Service** - Fetches anime details for favorited titles
+
+## Next Steps for Implementation
+
+1. Implement authentication system
+2. Create backend API endpoints for favorites
+3. Implement favoriteService functions
+4. Build FavoriteButton component with toggle functionality
+5. Create favorites page layout and logic
+6. Integrate favorite button into anime detail pages
+7. Add favorites count badge to user menu
+8. Implement favorites sorting and filtering
+
+## Related Features
+
+- [Authentication](/features/authentication) - Required for favorites functionality
+- [Anime Browsing](/features/anime-browsing) - Discover anime to favorite
+- [Search](/features/search) - Find anime to add to favorites

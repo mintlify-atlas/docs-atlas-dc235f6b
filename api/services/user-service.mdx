@@ -1,0 +1,315 @@
+---
+title: 'User Service'
+description: 'Service for managing user profiles and account information'
+---
+
+The User Service handles user profile operations including retrieving and updating user information.
+
+## Import
+
+```javascript
+import {
+  getProfile,
+  updateProfile
+} from './services/userService.js';
+```
+
+## API Endpoints
+
+The User Service interacts with the following backend endpoints:
+
+- `GET /api/user/profile` - Get current user profile
+- `PUT /api/user/profile` - Update user profile
+
+## Functions
+
+### getProfile
+
+Retrieves the authenticated user's profile information.
+
+```javascript
+const result = await getProfile();
+
+if (!result.error) {
+  console.log('Username:', result.data.username);
+  console.log('Email:', result.data.email);
+  console.log('Bio:', result.data.bio);
+  console.log('Avatar:', result.data.avatar);
+}
+```
+
+**Returns:** `Promise<ProfileResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="UserProfile">
+  User profile information
+  <Expandable title="UserProfile properties">
+    <ResponseField name="id" type="string">
+      User ID
+    </ResponseField>
+    <ResponseField name="username" type="string">
+      Username
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      Email address
+    </ResponseField>
+    <ResponseField name="avatar" type="string">
+      Avatar image URL
+    </ResponseField>
+    <ResponseField name="bio" type="string">
+      User biography or description
+    </ResponseField>
+    <ResponseField name="favoriteGenres" type="string[]">
+      List of favorite anime genres
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      Account creation timestamp
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      Profile last update timestamp
+    </ResponseField>
+    <ResponseField name="stats" type="object">
+      User statistics
+      <Expandable title="Stats object">
+        <ResponseField name="favoritesCount" type="number">
+          Number of favorite anime
+        </ResponseField>
+        <ResponseField name="commentsCount" type="number">
+          Number of comments posted
+        </ResponseField>
+        <ResponseField name="watchedCount" type="number">
+          Number of anime watched
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### updateProfile
+
+Updates the authenticated user's profile information.
+
+```javascript
+const result = await updateProfile({
+  username: 'new_username',
+  bio: 'Huge anime fan! Love action and adventure series.',
+  avatar: 'https://example.com/new-avatar.jpg',
+  favoriteGenres: ['action', 'adventure', 'shounen']
+});
+
+if (!result.error) {
+  console.log('Profile updated successfully!');
+  console.log('Updated profile:', result.data);
+}
+```
+
+<ParamField path="updates" type="object" required>
+  Profile fields to update
+  <Expandable title="Update fields">
+    <ParamField path="username" type="string">
+      New username (must be unique)
+    </ParamField>
+    <ParamField path="bio" type="string">
+      User biography (max 500 characters)
+    </ParamField>
+    <ParamField path="avatar" type="string">
+      Avatar image URL
+    </ParamField>
+    <ParamField path="favoriteGenres" type="string[]">
+      List of favorite anime genres
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<UpdateProfileResponse | ResponseError>`
+
+<ResponseField name="success" type="boolean">
+  Indicates if the profile was updated successfully
+</ResponseField>
+
+<ResponseField name="data" type="UserProfile">
+  Updated user profile information
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message
+</ResponseField>
+
+---
+
+## Usage Example
+
+Here's a complete example of a user profile management component:
+
+```javascript
+import { getProfile, updateProfile } from './services/userService.js';
+
+class UserProfile {
+  constructor() {
+    this.profile = null;
+  }
+
+  async load() {
+    const result = await getProfile();
+    if (!result.error) {
+      this.profile = result.data;
+      this.renderProfile();
+    } else {
+      console.error('Failed to load profile:', result.message);
+    }
+  }
+
+  async save(formData) {
+    const updates = {
+      username: formData.get('username'),
+      bio: formData.get('bio'),
+      avatar: formData.get('avatar'),
+      favoriteGenres: formData.get('genres').split(',').map(g => g.trim())
+    };
+
+    const result = await updateProfile(updates);
+    if (!result.error) {
+      this.profile = result.data;
+      this.renderProfile();
+      this.showNotification('Profile updated successfully!');
+    } else {
+      this.showError(result.message);
+    }
+  }
+
+  renderProfile() {
+    const container = document.getElementById('profile');
+    container.innerHTML = `
+      <div class="profile-card">
+        <img src="${this.profile.avatar}" alt="${this.profile.username}" class="avatar">
+        <h2>${this.profile.username}</h2>
+        <p class="email">${this.profile.email}</p>
+        <p class="bio">${this.profile.bio || 'No bio yet'}</p>
+        <div class="stats">
+          <div>
+            <strong>${this.profile.stats.favoritesCount}</strong>
+            <span>Favorites</span>
+          </div>
+          <div>
+            <strong>${this.profile.stats.commentsCount}</strong>
+            <span>Comments</span>
+          </div>
+          <div>
+            <strong>${this.profile.stats.watchedCount}</strong>
+            <span>Watched</span>
+          </div>
+        </div>
+        <div class="genres">
+          ${this.profile.favoriteGenres.map(genre => 
+            `<span class="genre-tag">${genre}</span>`
+          ).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  showNotification(message) {
+    // Implementation of notification display
+  }
+
+  showError(message) {
+    // Implementation of error display
+  }
+}
+
+// Usage
+const profile = new UserProfile();
+await profile.load();
+```
+
+## Form Validation Example
+
+```javascript
+function validateProfileUpdate(updates) {
+  const errors = [];
+
+  if (updates.username) {
+    if (updates.username.length < 3 || updates.username.length > 20) {
+      errors.push('Username must be between 3 and 20 characters');
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(updates.username)) {
+      errors.push('Username can only contain letters, numbers, and underscores');
+    }
+  }
+
+  if (updates.bio && updates.bio.length > 500) {
+    errors.push('Bio must not exceed 500 characters');
+  }
+
+  if (updates.avatar && !isValidUrl(updates.avatar)) {
+    errors.push('Avatar must be a valid URL');
+  }
+
+  return errors;
+}
+
+async function saveProfile(updates) {
+  const errors = validateProfileUpdate(updates);
+  if (errors.length > 0) {
+    console.error('Validation errors:', errors);
+    return;
+  }
+
+  const result = await updateProfile(updates);
+  if (!result.error) {
+    console.log('Profile saved successfully!');
+  }
+}
+```
+
+## Error Handling
+
+```javascript
+const result = await updateProfile(updates);
+
+if (result.error) {
+  switch (result.statusCode) {
+    case 401:
+      console.error('Authentication required');
+      // Redirect to login
+      break;
+    case 400:
+      console.error('Invalid profile data:', result.message);
+      break;
+    case 409:
+      console.error('Username already taken');
+      break;
+    default:
+      console.error('Error updating profile:', result.message);
+  }
+}
+```
+
+<ResponseField name="error" type="boolean">
+  True if an error occurred
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error message description
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code
+</ResponseField>
+
+<Note>
+  All user profile operations require the user to be authenticated. Include the authentication token in request headers.
+</Note>
+
+<Tip>
+  Profile updates are partial - you only need to include the fields you want to change. Omitted fields will remain unchanged.
+</Tip>
+
+<Warning>
+  Changing your username may affect URLs and references throughout the application. Choose carefully!
+</Warning>
